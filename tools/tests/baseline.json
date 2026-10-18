@@ -1,0 +1,115 @@
+{
+ "commit": "2c79625",
+ "date": "2026-10-18",
+ "gpu": "RTX 3060, headless Edge 155",
+ "procedure": "tools/tests/checksums.js: pause, Math.random=mulberry32(seed), P.rewire=0, NET.size=30000, applyPreset, run(2000), checksum(); all jobs in one page in this order",
+ "results": [
+  {
+   "key": "cortex",
+   "seed": 1,
+   "N": 30000,
+   "hash": {
+    "nState": "7aef536d",
+    "comps": "74462bc9",
+    "synA": "d08a637b",
+    "synW": "e05579e4",
+    "synS": "29391fe3"
+   }
+  },
+  {
+   "key": "hippo",
+   "seed": 1,
+   "N": 30000,
+   "hash": {
+    "nState": "5a708c49",
+    "comps": "1690e2bf",
+    "synA": "fc28bf3c",
+    "synW": "8b7a6d11",
+    "synS": "1fadfc15"
+   }
+  },
+  {
+   "key": "rhythm",
+   "seed": 1,
+   "N": 30000,
+   "hash": {
+    "nState": "9c7f9af1",
+    "comps": "8212cbc6",
+    "synA": "af33acc2",
+    "synW": "3aca61bf",
+    "synS": "ef4db8a2"
+   }
+  },
+  {
+   "key": "waves",
+   "seed": 1,
+   "N": 30000,
+   "hash": {
+    "nState": "7661fe3d",
+    "comps": "90c0d93d",
+    "synA": "fdd4c24c",
+    "synW": "b7a46292",
+    "synS": "f6a8e330"
+   }
+  },
+  {
+   "key": "shells",
+   "seed": 1,
+   "N": 30000,
+   "hash": {
+    "nState": "f8b7984",
+    "comps": "cfa76901",
+    "synA": "57ff9b08",
+    "synW": "d3c5434a",
+    "synS": "3b3babbc"
+   }
+  },
+  {
+   "key": "random",
+   "seed": 1,
+   "N": 30000,
+   "hash": {
+    "nState": "50268b77",
+    "comps": "32d7a34",
+    "synA": "9cfef1fb",
+    "synW": "732517d9",
+    "synS": "7e7c250"
+   }
+  },
+  {
+   "key": "random",
+   "seed": 2,
+   "N": 30000,
+   "hash": {
+    "nState": "9607a85a",
+    "comps": "a4126679",
+    "synA": "d40f49da",
+    "synW": "dd6990",
+    "synS": "a977a2ec"
+   }
+  },
+  {
+   "key": "random",
+   "seed": 3,
+   "N": 30000,
+   "hash": {
+    "nState": "9b02f510",
+    "comps": "2963114d",
+    "synA": "7c87b3d4",
+    "synW": "de9557ef",
+    "synS": "1a3be68c"
+   }
+  }
+ ],
+ "profile": {
+  "preset": "cortex",
+  "N": 30000,
+  "note": "ms per job, three profile(5) calls; noisy at about ±10-20% between calls",
+  "runs": [
+   "synapses x10 dense 1.07 | event 0.61 | neurons x10 4.47 | memory 0.44 | rewire 0.02 | culls 0.18 | dendrite tubes 1.04 | synapse sprites 0.07 | somata 0.08 | axon trees 0.13 | axon twigs 0.24 | sparks 0.17",
+   "synapses x10 dense 1.30 | event 0.69 | neurons x10 4.27 | memory 0.44 | rewire 0.02 | culls 0.18 | dendrite tubes 1.17 | synapse sprites 0.14 | somata 0.08 | axon trees 0.13 | axon twigs 0.31 | sparks 0.34",
+   "synapses x10 dense 1.37 | event 0.87 | neurons x10 4.22 | memory 0.31 | rewire 0.02 | culls 0.19 | dendrite tubes 1.16 | synapse sprites 0.07 | somata 0.08 | axon trees 0.20 | axon twigs 0.24 | sparks 0.81"
+  ],
+  "note2": "2026-10-18 CP2 check: the GPU was later about 2x faster for every kernel and draw alike (another session was probably using it during the runs above). Compare profiles interleaved against the 2c79625 file, not against these absolute numbers. Interleaved base vs CP2: neurons x10 min 2.15 vs 2.15 ms, medians 2.18 vs 2.26 ms."
+ }
+}

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Tadpole Guide</title>
+<meta name="description" content="A labelled guide to the Tadpole, a 30,000-neuron specimen in Cortex Garden: what each group of neurons does and how they work together.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #05050a; --panel: #0e0e18; --line: #22223a; --ink: #f1f0fa; --dim: #a9a8c2; --faint: #6d6c88;
+    --grad: linear-gradient(90deg, #ffb38a, #ff8ad8 35%, #9ab8ff 70%, #9affd8); }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 "Familjen Grotesk", system-ui, sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--faint); }
+  nav { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; }
+  nav a { text-decoration: none; color: var(--dim); } nav a:hover { color: var(--ink); }
+  .btn { display: inline-flex; white-space: nowrap; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); text-decoration: none; font-weight: 600; color: var(--ink) !important; }
+  .btn.primary { background: var(--ink); color: var(--bg) !important; border-color: var(--ink); }
+  h1 { font: 700 clamp(40px, 7vw, 84px)/1 "Unbounded", sans-serif; margin: 28px 0 18px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; letter-spacing: -.02em; }
+  h2 { font: 500 clamp(24px, 3vw, 32px)/1.2 "Unbounded", sans-serif; margin: 8px 0 14px; }
+  .lede { max-width: 780px; font-size: clamp(18px, 2vw, 21px); color: #dcdbef; margin: 0 0 18px; }
+  section { padding: 56px 0 8px; }
+  p.dim { color: var(--dim); max-width: 820px; }
+
+  .try { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 26px; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; }
+  .step b { display: block; font-size: 18px; margin-bottom: 4px; }
+  .step p { margin: 0; color: var(--dim); font-size: 16px; }
+  kbd { display: inline-block; min-width: 24px; text-align: center; font: 600 14px/22px "JetBrains Mono", monospace; border: 1px solid #8a8aa8; border-radius: 6px; padding: 0 6px; color: var(--ink); }
+
+  figure { margin: 0; }
+  .frame { display: block; background: #000; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .frame img { display: block; width: 100%; height: auto; }
+  figcaption { color: var(--faint); font-size: 14px; margin-top: 10px; }
+  figcaption a { color: var(--dim); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; margin: 4px 0 16px; }
+  .seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+  .seg button { font: 500 15px "Familjen Grotesk", sans-serif; color: var(--dim); background: none; border: 0; border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .seg button:hover:not([aria-pressed="true"]) { color: var(--ink); }
+  .seglabel { font: 500 11px "JetBrains Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin-right: 8px; }
+  .viewer { position: relative; aspect-ratio: 3440 / 1440; }
+  .viewer img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity .25s; }
+  .viewer img.loading { opacity: .35; }
+
+  .how { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; }
+  .note h3 { margin: 0 0 6px; font-size: 19px; display: flex; gap: 10px; align-items: center; }
+  .note h3 span { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--bg); font: 600 14px/26px "JetBrains Mono", monospace; text-align: center; }
+  .note p { margin: 0; color: var(--dim); font-size: 16px; }
+
+  .groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 26px 22px; }
+  .sub h3 { margin: 0 0 10px; font: 600 13px "JetBrains Mono", monospace; letter-spacing: .16em; text-transform: uppercase; }
+  .g { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 11px 0 12px; border-top: 1px solid var(--line); }
+  .g b { font-size: 17px; }
+  .g p { grid-column: 1 / -1; margin: 0; color: var(--dim); font-size: 15.5px; }
+  footer { margin-top: 64px; border-top: 1px solid var(--line); padding: 26px 0 48px; color: var(--faint); font-size: 15px; }
+  @media (max-width: 760px) { .try { grid-template-columns: 1fr; } .viewer { aspect-ratio: auto; } .viewer img { position: static; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav><a href="../">← Dendrite Garden</a><a class="btn primary" href="../cortex.html">Open Cortex Garden</a></nav>
+
+  <div class="mono">A user's guide</div>
+  <h1>The Tadpole</h1>
+  <p class="lede">A whole little animal grown from 30,000 spiking neurons in 22 groups. Touch it and it swims. Feed it and it feeds. Show it light just before food a few times and light alone makes it feed. There is no scripted logic anywhere: only spikes, synapses and neuromodulators.</p>
+
+  <div class="try">
+    <div class="step"><b>1 · Grow it</b><p>Open Cortex Garden. In the Simulation tab, under Specimen, pick <em>Tadpole: the whole specimen</em>. It takes a few seconds to grow.</p></div>
+    <div class="step"><b>2 · Touch and feed it</b><p>Hold <kbd>1</kbd> to touch it: it swims, its tail beating left and right. Hold <kbd>3</kbd> to feed it: the feed lobe wins and the pump below pulses.</p></div>
+    <div class="step"><b>3 · Teach it</b><p>Hold <kbd>2</kbd> (light), and while it is still on, hold <kbd>3</kbd> (food). Do this about five times and light alone starts feeding. <em>Clear memories</em> forgets it.</p></div>
+  </div>
+
+  <section>
+    <div class="mono">How it is wired</div>
+    <h2>The wiring diagram</h2>
+    <figure>
+      <a class="frame" href="img/tadpole-schematic.png"><img src="img/tadpole-schematic.png" alt="Wiring diagram of the Tadpole: senses on the left, the swim and feed paths across the middle, the tail on the right and the modulators below." width="3440" height="1440"></a>
+      <figcaption>Head on the left, tail on the right. Orange arrows excite, blue bars inhibit, dashed gold arrows are weak synapses that can learn. Open it full size, or as a <a href="schematic.html">live page</a>.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="mono">The ideas</div>
+    <h2>How it works</h2>
+    <div class="how" id="how"></div>
+  </section>
+
+  <section>
+    <div class="mono">The real thing</div>
+    <h2>Every group, from every angle</h2>
+    <p class="dim">Rendered from the live simulation, the same specimen every time. Each label points at the cell nearest its group's centre, so in some views it points through a group in front.</p>
+    <div class="controls">
+      <div><span class="seglabel">State</span><span class="seg" id="state"></span></div>
+      <div><span class="seglabel">View</span><span class="seg" id="angle"></span></div>
+      <div><span class="seglabel">Look</span><span class="seg" id="look"></span></div>
+    </div>
+    <figure>
+      <a class="frame viewer" id="vlink"><img id="vimg" alt=""></a>
+      <figcaption id="vcap"></figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="mono">Field guide</div>
+    <h2>The 22 groups</h2>
+    <div class="groups" id="groups"></div>
+  </section>
+</div>
+<footer><div class="wrap">The Tadpole lives in <a href="../cortex.html">Cortex Garden</a>. Source on <a href="https://github.com/GSNautilus/dendrite-garden">GitHub</a>.</div></footer>
+
+<script>
+const GROUPS = {"eye": {"tag": "SENSE", "name": "Light (eye)", "job": "Photoreceptors. Light falling here drives the Light relay.", "key": 2}, "light": {"tag": "SENSE", "name": "Light relay", "job": "Passes light to both choice lobes through weak synapses that can learn. A touch mutes it."}, "touch": {"tag": "SENSE", "name": "Touch", "job": "Touch relays. They wake the Swim choice, the Touch gate and the Alarm.", "key": 1}, "tgate": {"tag": "SENSE", "name": "Touch gate", "job": "Inhibitory. While the skin is touched it silences the Light relay."}, "food": {"tag": "SENSE", "name": "Food", "job": "Food relays. They drive the Feed choice and the VTA.", "key": 3}, "swim": {"tag": "SWIM", "name": "Swim choice", "job": "The decision to swim. Its cells excite each other, so one push latches it on."}, "gate": {"tag": "SWIM", "name": "Swim gate", "job": "Inhibitory. While the choice is on, it switches the Swim brake off."}, "brake": {"tag": "SWIM", "name": "Swim brake", "job": "Always firing, holding the Command silent until the gate lets go."}, "command": {"tag": "SWIM", "name": "Command", "job": "Released from the brake, it drives both sides of the tail."}, "rhythmL": {"tag": "TAIL", "name": "Rhythm L", "job": "Half of the swim rhythm: bursts until its synapses tire, inhibiting the other side meanwhile."}, "rhythmR": {"tag": "TAIL", "name": "Rhythm R", "job": "The other half. The two sides take turns: that alternation is the stroke."}, "feed": {"tag": "FEED", "name": "Feed choice", "job": "The decision to feed. A mirror of the Swim choice."}, "fgate": {"tag": "FEED", "name": "Feed gate", "job": "Inhibitory. While the Feed choice is on, it switches the Feed brake off."}, "fbrake": {"tag": "FEED", "name": "Feed brake", "job": "Always firing, holding the pump still until the gate lets go."}, "pump": {"tag": "FEED", "name": "Feed pump", "job": "Released, it pulses: bursts that ignite, tire out and recover."}, "cS": {"tag": "CHOICE", "name": "Competition S", "job": "Driven by the Swim choice; inhibits the Feed choice."}, "cF": {"tag": "CHOICE", "name": "Competition F", "job": "Driven by the Feed choice; inhibits the Swim choice. Only one choice can win."}, "alarm": {"tag": "MOD", "name": "Alarm (LC)", "job": "Touch wakes it. Noradrenaline into both lobes and the tail: louder strokes."}, "bf": {"tag": "MOD", "name": "Basal forebrain", "job": "Light wakes it. Acetylcholine into the tail: faster strokes."}, "raphe": {"tag": "MOD", "name": "Raphe", "job": "Swimming wakes it. Serotonin slowly tires the Swim choice: a long swim gives up."}, "sraphe": {"tag": "MOD", "name": "Raphe (feeding)", "job": "Feeding wakes it. Serotonin tires the Feed choice: fullness after ~8 s."}, "vta": {"tag": "MOD", "name": "VTA", "job": "Food wakes it. Dopamine into the Feed choice lets Light → Feed learn."}};
+const TAGS = { SENSE: ['#ffd166', 'Senses'], CHOICE: ['#c9a3ff', 'Competition'], SWIM: ['#ff8f6b', 'Swim path'], TAIL: ['#ff7ad9', 'Tail rhythm'], FEED: ['#9be564', 'Feed path'], MOD: ['#7fd8ff', 'Modulators'] };
+const NOTES = [
+  ['Release the brake', 'The brakes fire all the time and hold the Command and the pump silent. A choice excites its gate, the gate inhibits the brake, and the output is set free: two inhibitions make a go.'],
+  ['Only one choice wins', 'Each choice lobe drives its own competition group, which inhibits the other lobe. Whichever lobe gets ahead silences its rival.'],
+  ['The tail keeps time', 'Each half of the tail bursts until its synapses tire, inhibiting the other half meanwhile. Then the other half takes over. The alternation is the swim stroke.'],
+  ['Light learns to mean food', 'Light reaches both choice lobes only weakly. Food wakes the VTA, whose dopamine strengthens the Light → Feed synapses that were just active. After about five pairings, Light alone starts feeding.'],
+  ['Moods', 'Noradrenaline makes strokes louder, acetylcholine faster. Serotonin builds slowly and tires a choice out: a long swim gives up, and a meal ends in fullness.'],
+];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+document.getElementById('how').innerHTML = NOTES.map(([t, b], i) => `<div class="note"><h3><span>${i + 1}</span>${esc(t)}</h3><p>${esc(b)}</p></div>`).join('');
+document.getElementById('groups').innerHTML = Object.entries(TAGS).map(([tag, [col, name]]) => {
+  const gs = Object.values(GROUPS).filter(g => g.tag === tag);
+  return `<div class="sub"><h3 style="color:${col}">${name}</h3>${gs.map(g => `<div class="g" style="border-left:3px solid ${col};padding-left:12px"><b>${esc(g.name)}</b>${g.key ? `<kbd>${g.key}</kbd>` : '<span></span>'}<p>${esc(g.job)}</p></div>`).join('')}</div>`;
+}).join('');
+
+const OPTS = {
+  state: [['rest', 'At rest'], ['touch', 'Touch: swims'], ['feed', 'Light + Food: feeds']],
+  angle: [['three', 'Three-quarter'], ['side', 'Side'], ['top', 'Top'], ['front', 'Head-on']],
+  look: [['diagram', 'Diagram'], ['garden', 'Garden']],
+};
+const CAP = {
+  state: { rest: 'At rest: only a faint idle flicker.', touch: 'Holding Touch (key 1): the Swim choice latches, the brake lets go and the tail beats.', feed: 'Light and Food on together: the Feed choice wins, silences the Swim choice, and the feed path opens.' },
+  look: { diagram: 'Diagram look: cells coloured by type, warm for excitatory and cool for inhibitory; brightness follows activity.', garden: 'Garden look: the default view of Cortex Garden.' },
+};
+const cur = { state: 'touch', angle: 'three', look: 'diagram' };
+const img = document.getElementById('vimg'), link = document.getElementById('vlink');
+function show() {
+  const src = `img/tadpole-${cur.look}-${cur.state}-${cur.angle}.jpg`;
+  img.classList.add('loading');
+  const pre = new Image(); pre.onload = () => { img.src = src; img.classList.remove('loading'); }; pre.src = src;
+  link.href = src;
+  img.alt = `The Tadpole, ${OPTS.angle.find(o => o[0] === cur.angle)[1].toLowerCase()} view, ${OPTS.state.find(o => o[0] === cur.state)[1].toLowerCase()}, ${cur.look} look, with every group labelled.`;
+  document.getElementById('vcap').textContent = `${CAP.state[cur.state]} ${CAP.look[cur.look]} Click for full size.`;
+  for (const k in OPTS) for (const b of document.getElementById(k).children) b.setAttribute('aria-pressed', b.dataset.v === cur[k]);
+}
+for (const [k, opts] of Object.entries(OPTS)) {
+  const seg = document.getElementById(k);
+  for (const [v, label] of opts) { const b = document.createElement('button'); b.type = 'button'; b.dataset.v = v; b.textContent = label; b.onclick = () => { cur[k] = v; show(); }; seg.appendChild(b); }
+}
+show();
+</script>
+</body>
+</html>

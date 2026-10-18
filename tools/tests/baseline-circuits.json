@@ -1,0 +1,71 @@
+{
+ "commit": "0ec76e6",
+ "date": "2026-10-18",
+ "gpu": "RTX 3060, headless Edge 155",
+ "procedure": "as baseline.json (tools/tests/checksums.js with tools/tests/t0jobs.js in front): circuit presets set their own size",
+ "results": [
+  { "key": "modtest",
+   "seed": 1,
+   "N": 8800,
+   "hash": {
+    "nState": "2f05820a",
+    "comps": "af10f7b9",
+    "synA": "4e8f9264",
+    "synW": "f39c40e3",
+    "synS": "65c147e8",
+    "mod": "b07cb7c0"
+   },
+   "commit": "bd75b4e"
+  },
+  { "key": "captest",
+   "seed": 1,
+   "N": 2200,
+   "hash": {
+    "nState": "b622c0ff",
+    "comps": "99fe6e7a",
+    "synA": "415e9645",
+    "synW": "f7a379c5",
+    "synS": "ddee91c5",
+    "mod": "dfde6ac5"
+   },
+   "commit": "bd75b4e"
+  },
+  { "key": "tadpole1",
+   "seed": 1,
+   "N": 15000,
+   "hash": {
+    "nState": "33651ccd",
+    "comps": "eec29fa3",
+    "synA": "718bf8ac",
+    "synW": "fa5eba68",
+    "synS": "b335a2ff"
+   },
+   "commit": "phase3-tuning1"
+  },
+  { "key": "compete",
+   "seed": 1,
+   "N": 9800,
+   "hash": {
+    "nState": "7b6c2bf7",
+    "comps": "2197f9ae",
+    "synA": "bd53c4a9",
+    "synW": "1dc7ea7d",
+    "synS": "6096ff1"
+   },
+   "commit": "phase3-tuning1"
+  },
+  { "key": "tadpole2",
+   "seed": 1,
+   "N": 16200,
+   "hash": {
+    "nState": "43036de",
+    "comps": "53156e5f",
+    "synA": "ec1ff989",
+    "synW": "6a9494cb",
+    "synS": "523376ef",
+    "mod": "5c92add3"
+   },
+   "commit": "phase3-tuning1"
+  }
+ ]
+}

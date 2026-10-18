@@ -1,0 +1,115 @@
+{
+  "eye": {
+    "tag": "SENSE",
+    "name": "Light (eye)",
+    "job": "Photoreceptors. Light falling here drives the Light relay.",
+    "key": 2
+  },
+  "light": {
+    "tag": "SENSE",
+    "name": "Light relay",
+    "job": "Passes light to both choice lobes through weak synapses that can learn. A touch mutes it."
+  },
+  "touch": {
+    "tag": "SENSE",
+    "name": "Touch",
+    "job": "Touch relays. They wake the Swim choice, the Touch gate and the Alarm.",
+    "key": 1
+  },
+  "tgate": {
+    "tag": "SENSE",
+    "name": "Touch gate",
+    "job": "Inhibitory. While the skin is touched it silences the Light relay."
+  },
+  "food": {
+    "tag": "SENSE",
+    "name": "Food",
+    "job": "Food relays. They drive the Feed choice and the VTA.",
+    "key": 3
+  },
+  "swim": {
+    "tag": "SWIM",
+    "name": "Swim choice",
+    "job": "The decision to swim. Its cells excite each other, so one push latches it on."
+  },
+  "gate": {
+    "tag": "SWIM",
+    "name": "Swim gate",
+    "job": "Inhibitory. While the choice is on, it switches the Swim brake off."
+  },
+  "brake": {
+    "tag": "SWIM",
+    "name": "Swim brake",
+    "job": "Always firing, holding the Command silent until the gate lets go."
+  },
+  "command": {
+    "tag": "SWIM",
+    "name": "Command",
+    "job": "Released from the brake, it drives both sides of the tail."
+  },
+  "rhythmL": {
+    "tag": "TAIL",
+    "name": "Rhythm L",
+    "job": "Half of the swim rhythm: bursts until its synapses tire, inhibiting the other side meanwhile."
+  },
+  "rhythmR": {
+    "tag": "TAIL",
+    "name": "Rhythm R",
+    "job": "The other half. The two sides take turns: that alternation is the stroke."
+  },
+  "feed": {
+    "tag": "FEED",
+    "name": "Feed choice",
+    "job": "The decision to feed. A mirror of the Swim choice."
+  },
+  "fgate": {
+    "tag": "FEED",
+    "name": "Feed gate",
+    "job": "Inhibitory. While the Feed choice is on, it switches the Feed brake off."
+  },
+  "fbrake": {
+    "tag": "FEED",
+    "name": "Feed brake",
+    "job": "Always firing, holding the pump still until the gate lets go."
+  },
+  "pump": {
+    "tag": "FEED",
+    "name": "Feed pump",
+    "job": "Released, it pulses: bursts that ignite, tire out and recover."
+  },
+  "cS": {
+    "tag": "CHOICE",
+    "name": "Competition S",
+    "job": "Driven by the Swim choice; inhibits the Feed choice."
+  },
+  "cF": {
+    "tag": "CHOICE",
+    "name": "Competition F",
+    "job": "Driven by the Feed choice; inhibits the Swim choice. Only one choice can win."
+  },
+  "alarm": {
+    "tag": "MOD",
+    "name": "Alarm (LC)",
+    "job": "Touch wakes it. Noradrenaline into both lobes and the tail: louder strokes."
+  },
+  "bf": {
+    "tag": "MOD",
+    "name": "Basal forebrain",
+    "job": "Light wakes it. Acetylcholine into the tail: faster strokes."
+  },
+  "raphe": {
+    "tag": "MOD",
+    "name": "Raphe",
+    "job": "Swimming wakes it. Serotonin slowly tires the Swim choice: a long swim gives up."
+  },
+  "sraphe": {
+    "tag": "MOD",
+    "name": "Raphe (feeding)",
+    "job": "Feeding wakes it. Serotonin tires the Feed choice: fullness after ~8 s."
+  },
+  "vta": {
+    "tag": "MOD",
+    "name": "VTA",
+    "job": "Food wakes it. Dopamine into the Feed choice lets Light → Feed learn."
+  }
+}

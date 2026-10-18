@@ -1,0 +1,1427 @@
+<title>Dendrite Garden</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@300;500;700&display=swap">
+<style>
+/* Layout: a full-bleed living specimen; glass instruments float at the edges like a microscope's HUD */
+:root{
+  --bg:#05040b; --ink:#eeeaff; --muted:#a29bc8; --dim:#655e8c;
+  --glass:rgba(12,9,27,.66); --glass-hi:rgba(38,30,76,.72); --line:rgba(196,178,255,.15);
+  --accent:#d6a8ff; --accent-2:#86e6ff; --warm:#ffb98a; --danger:#ff8a9a;
+  --f-display:'Unbounded','Segoe UI',system-ui,sans-serif;
+  --f-body:'Familjen Grotesk','Segoe UI',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px}
+#stage{position:fixed;inset:0;background:var(--bg)}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
+button{font:inherit;color:inherit}
+.glass{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%)}
+
+.brand{position:fixed;left:16px;top:calc(14px + env(safe-area-inset-top,0px));pointer-events:none;z-index:3}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:500;font-size:20px;letter-spacing:.01em;line-height:1.1;
+  background:linear-gradient(100deg,#ffd2a8 0%,#ff9de2 30%,#c6a6ff 55%,#8fe9ff 85%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 14px rgba(200,150,255,.35))}
+.brand p{margin:4px 0 0;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+#panel{position:fixed;left:16px;top:calc(72px + env(safe-area-inset-top,0px));width:292px;max-height:calc(100% - 72px - 104px);overflow:auto;
+  border-radius:16px;padding:6px 16px 14px;z-index:4;scrollbar-width:thin;scrollbar-color:var(--dim) transparent}
+#panel[hidden]{display:none!important}
+.sec{display:flex;flex-direction:column;gap:9px;padding-block:12px;border-bottom:1px solid var(--line)}
+.sec:last-child{border-bottom:0}
+.sec h2{margin:0;font-family:var(--f-mono);font-weight:500;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 11px;font-size:12.5px;cursor:pointer;transition:background .2s,border-color .2s,box-shadow .2s}
+.chip:hover{border-color:rgba(214,168,255,.45)}
+.chip.on{background:var(--glass-hi);border-color:var(--accent);box-shadow:0 0 14px rgba(214,168,255,.3)}
+.chip:focus-visible,.tool:focus-visible,.btn:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center}
+.row label{font-size:13px;color:var(--ink)}
+.row output{font-family:var(--f-mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.row input{grid-column:1/-1}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:3px;background:linear-gradient(90deg,rgba(255,185,138,.55),rgba(214,168,255,.55),rgba(134,230,255,.55))}
+input[type=range]::-moz-range-track{height:3px;border-radius:3px;background:linear-gradient(90deg,rgba(255,185,138,.55),rgba(214,168,255,.55),rgba(134,230,255,.55))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;margin-top:-5px;border-radius:50%;background:var(--ink);box-shadow:0 0 10px rgba(214,168,255,.8)}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--ink);box-shadow:0 0 10px rgba(214,168,255,.8)}
+input[type=range]:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px;border-radius:4px}
+.hint{margin:0;font-size:12px;line-height:1.45;color:var(--muted)}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:9px;padding:6px 10px;font-size:12.5px;cursor:pointer}
+.btn:hover{border-color:rgba(214,168,255,.45)}
+.toggles{display:flex;flex-wrap:wrap;gap:6px}
+dl.guide{margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 10px;font-size:12px;line-height:1.4}
+dl.guide dt{width:10px;height:10px;border-radius:50%;margin-top:3px}
+dl.guide dd{margin:0;color:var(--muted)}
+dl.guide dd b{color:var(--ink);font-weight:500}
+details.guidebox summary{cursor:pointer;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);list-style:none}
+details.guidebox summary::-webkit-details-marker{display:none}
+details.guidebox summary::after{content:' +';color:var(--dim)}
+details.guidebox[open] summary::after{content:' –'}
+details.guidebox[open] dl{margin-top:10px}
+
+#dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:5;border-radius:18px;padding:5px;
+  display:flex;gap:2px;align-items:stretch;max-width:calc(100% - 32px);overflow-x:auto;scrollbar-width:none}
+#dock::-webkit-scrollbar{display:none}
+.tool{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;border-radius:13px;padding:7px 10px 6px;min-width:58px;cursor:pointer;color:var(--muted);transition:color .2s,background .2s}
+.tool svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tool span{font-family:var(--f-mono);font-size:10px;letter-spacing:.06em}
+.tool:hover{color:var(--ink)}
+.tool.on{color:var(--ink);background:var(--glass-hi)}
+.tool.on::after{content:'';position:absolute;left:22%;right:22%;bottom:2px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--warm),var(--accent),var(--accent-2));box-shadow:0 0 8px var(--accent)}
+.sep{width:1px;background:var(--line);margin:6px 4px;flex:none}
+kbd{font-family:var(--f-mono);font-size:10px;color:var(--dim)}
+
+#hud{position:fixed;right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:300px;border-radius:16px;padding:12px 14px;z-index:4;display:flex;flex-direction:column;gap:9px}
+#hud h2{margin:0;font-family:var(--f-mono);font-weight:500;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+#raster{width:100%;height:92px;display:block;border-radius:8px;background:rgba(0,0,0,.35)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-family:var(--f-mono);font-size:11px;font-variant-numeric:tabular-nums}
+.stats div{display:flex;justify-content:space-between;gap:6px;color:var(--muted)}
+.stats b{font-weight:500;color:var(--ink)}
+#inspect{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:9px}
+#inspect .title{font-family:var(--f-display);font-size:12.5px;font-weight:500}
+#scope{width:100%;height:64px;display:block;border-radius:8px;background:rgba(0,0,0,.35)}
+#tip{position:fixed;left:0;top:0;z-index:10;max-width:268px;padding:9px 11px;border-radius:10px;font-size:12.5px;line-height:1.45;color:var(--ink);background:rgba(16,12,34,.95);border:1px solid var(--line);box-shadow:0 10px 32px rgba(0,0,0,.55);pointer-events:none;opacity:0;transition:opacity .14s}
+#tip.show{opacity:1}
+#tip b{display:block;font-family:var(--f-display);font-weight:500;font-size:11.5px;letter-spacing:.02em;margin-bottom:3px}
+#status{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:6;font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:6px 12px;border-radius:999px;color:var(--ink);pointer-events:none;transition:opacity .4s}
+#err{position:fixed;left:16px;right:16px;top:50%;transform:translateY(-50%);z-index:9;max-width:560px;margin:auto;padding:16px;border-radius:14px;border:1px solid var(--danger);background:#1a0b14;color:var(--ink);font-family:var(--f-mono);font-size:12px;white-space:pre-wrap}
+
+body.ui-hidden #panel,body.ui-hidden #hud,body.ui-hidden .brand{display:none!important}
+body.ui-hidden #dock{opacity:.25}
+body.ui-hidden #dock:hover{opacity:1}
+
+@media (max-width:760px){
+  #panel{width:auto;right:16px;top:calc(64px + env(safe-area-inset-top,0px));max-height:calc(100% - 64px - 96px)}
+  #hud{top:calc(12px + env(safe-area-inset-top,0px));bottom:auto;width:158px;padding:8px 10px;gap:6px}
+  #hud h2,#raster,#inspect{display:none}
+  .stats{grid-template-columns:1fr;font-size:10.5px}
+  .brand h1{font-size:16px}
+  .brand p{display:none}
+  .tool{min-width:50px;padding:7px 7px 6px}
+}
+@media (prefers-reduced-motion:reduce){.chip,.tool{transition:none}}
+</style>
+
+<div id="stage" aria-label="Interactive 3D neuron network"></div>
+
+<header class="brand">
+  <h1>Dendrite Garden</h1>
+  <p>Spiking neurons with living dendrites</p>
+</header>
+
+<aside id="panel" class="glass" aria-label="Controls">
+  <div class="sec">
+    <details class="guidebox" id="guide">
+      <summary>Field guide</summary>
+      <dl class="guide">
+        <dt style="background:#9fd8ff;box-shadow:0 0 8px #9fd8ff"></dt><dd><b>Glowing branches</b> are dendritic voltage. Input light drains toward the soma and fades with distance.</dd>
+        <dt style="background:#ff8fe0;box-shadow:0 0 8px #ff8fe0"></dt><dd><b>Hot flares</b> are NMDA dendritic spikes: a branch firing on its own when coincident input arrives.</dd>
+        <dt style="background:#fff;box-shadow:0 0 8px #fff"></dt><dd><b>A flash spreading outward</b> from a soma is a back-propagating action potential. It is also the teaching signal for plasticity.</dd>
+        <dt style="background:#ffc08a;box-shadow:0 0 8px #ffc08a"></dt><dd><b>Comets</b> are spikes in flight down axons. Warm ones excite, cool ones inhibit.</dd>
+        <dt style="background:#d6a8ff;box-shadow:0 0 8px #d6a8ff"></dt><dd><b>Beads</b> are synapses. Size is strength, flicker is short-term facilitation or fatigue, and a four-point star is a consolidated long-term memory.</dd>
+        <dt style="background:linear-gradient(90deg,#ffb98a,#86e6ff)"></dt><dd><b>Soma hue</b> follows each neuron's firing phase, so neurons in sync share a colour.</dd>
+      </dl>
+    </details>
+  </div>
+  <div class="sec">
+    <h2>Network</h2>
+    <div class="chips" id="presets"></div>
+    <div class="btns"><button class="btn" id="reseed" data-tip="Grow a fresh network of the same shape with new random dendrites and wiring.">Regrow</button><button class="btn" id="clearMem" data-tip="Reset every synapse to its starting strength, erasing both fluid and crystallised memories.">Clear memories</button></div>
+  </div>
+  <div class="sec" id="secDyn"><h2>Dynamics</h2></div>
+  <div class="sec" id="secPlast"><h2>Plasticity</h2></div>
+  <div class="sec" id="secLook"><h2>Look</h2>
+    <div class="chips" id="palettes"></div>
+  </div>
+  <div class="sec">
+    <p class="hint">Drag to orbit, scroll or pinch to zoom. Pick a tool below to touch the network. Keys: <kbd>1–5</kbd> networks, <kbd>Space</kbd> pause, <kbd>H</kbd> hide panels.</p>
+    <p class="hint">This toy can produce synchronised flashing. Lower Trails and Speed if you are sensitive to flicker.</p>
+  </div>
+</aside>
+
+<nav id="dock" class="glass" aria-label="Tools">
+  <button class="tool on" data-tool="orbit" data-tip-title="Orbit" data-tip="Drag to rotate the view, scroll or pinch to zoom, right-drag to pan. Key O."><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><ellipse cx="12" cy="12" rx="9.5" ry="4.2" transform="rotate(-25 12 12)"/></svg><span>Orbit</span></button>
+  <button class="tool" data-tool="stim" data-tip-title="Excite" data-tip="Hold and drag to paint glutamate onto the dendrites under the cursor, like two-photon uncaging. Several inputs landing together set off dendritic spikes. Right-drag still orbits. Key S."><svg viewBox="0 0 24 24"><path d="M13 2 5 13.5h6L10 22l8-11.5h-6z"/></svg><span>Excite</span></button>
+  <button class="tool" data-tool="pace" data-tip-title="Pace" data-tip="Click a neuron to make it fire rhythmically at the New pacemaker rate. Click it again to stop. Key P."><svg viewBox="0 0 24 24"><path d="M2 12h4l2.5-6 4 12 2.5-6H22"/></svg><span>Pace</span></button>
+  <button class="tool" data-tool="inspect" data-tip-title="Probe" data-tip="Click a neuron to record its membrane voltage and highlight its wiring: inputs glow cyan, outputs gold. Key I."><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span>Probe</span></button>
+  <button class="tool" data-tool="lesion" data-tip-title="Lesion" data-tip="Click a neuron to silence it, and click again to revive it. Watch the network reroute around the gap. Key L."><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.6"/><circle cx="6" cy="17" r="2.6"/><path d="M8.2 8.4 20 17M8.2 15.6 20 7"/></svg><span>Lesion</span></button>
+  <div class="sep"></div>
+  <button class="tool" id="bSweep" data-tip-title="Light" data-tip="Sweep a sheet of light across the tissue. It depolarises every dendrite it passes, like optogenetic stimulation. Key W."><svg viewBox="0 0 24 24"><path d="M4 4v16M9 6v12M14 4v16M19 8v8"/></svg><span>Light</span></button>
+  <button class="tool" id="bSleep" data-tip-title="Sleep" data-tip="Slow-wave sleep: the network swings between up and down states, outside input fades, and memory consolidation runs 10× faster. Key Z."><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><span>Sleep</span></button>
+  <button class="tool" id="bSound" data-tip-title="Sound" data-tip="Every spike plucks a note. Excitatory cells ring higher, inhibitory cells thump lower, panned by position. Key M."><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/></svg><span>Sound</span></button>
+  <button class="tool" id="bPause" data-tip-title="Pause" data-tip="Freeze simulated time. You can still orbit, probe and lesion while paused. Space bar."><svg viewBox="0 0 24 24" id="pauseIcon"><path d="M8 5v14M16 5v14"/></svg><span id="pauseLabel">Pause</span></button>
+  <button class="tool on" id="bPanel" data-tip-title="Tune" data-tip="Show or hide the control panel. Press H to hide every panel for a clean view."><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>Tune</span></button>
+</nav>
+
+<section id="hud" class="glass" aria-label="Recording">
+  <h2><span>Spike raster</span><span id="simClock">0.00 s</span></h2>
+  <canvas id="raster"></canvas>
+  <div class="stats">
+    <div>Rate <b id="stRate">–</b></div>
+    <div>Synchrony <b id="stSync">–</b></div>
+    <div>Dend. spikes <b id="stDs">–</b></div>
+    <div>Memory <b id="stMem">–</b></div>
+    <div>Time scale <b id="stSpeed">–</b></div>
+    <div>Neurons <b id="stN">–</b></div>
+  </div>
+  <div id="inspect" hidden>
+    <div class="title" id="insTitle">Neuron</div>
+    <canvas id="scope"></canvas>
+    <div class="stats">
+      <div>Rate <b id="insRate">–</b></div>
+      <div>Inputs <b id="insIn">–</b></div>
+      <div>Bias <b id="insBias">–</b></div>
+      <div>Mean w <b id="insW">–</b></div>
+    </div>
+  </div>
+</section>
+
+<div id="status" class="glass">Growing neurons…</div>
+<div id="err" hidden></div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+window.addEventListener('error', function(e){ var el=document.getElementById('err'); if(el){ el.hidden=false; el.textContent='Something broke while running the simulation:\n'+(e.message||e)+'\n\nReload the page to try again.'; } });
+</script>
+
+<script>
+// ==SIM-BEGIN==
+(function (global) {
+'use strict';
+
+/* ---------- tunable parameters (UI writes here) ---------- */
+const P = {
+  drive: 1.0,      // ambient background synaptic bombardment
+  inhib: 1.0,      // inhibitory synapse gain
+  coupling: 1.0,   // dendritic axial conductance (sets length constant)
+  nmdaTh: 12,      // NMDA dendritic-spike threshold (mV above rest)
+  psy: 0,          // 5-HT2A tone: distal dendrites become excitable
+  lr: 1.0,         // STDP learning rate
+  consol: 1.0,     // early -> late consolidation speed
+  sleep: false,
+};
+
+const DT = 0.5;                 // ms per step
+const TAU_M = 20, INV_TAU_M = 1 / TAU_M;
+const TAU_SYN = 4, TAU_GLU = 15;
+const GN = 2.2, EN = 62, TAU_N = 30, REFR_N = 80, GLU_MIN = 0.35;
+const K_SOMA = 0.34, BAP = 42, BAP_DELAY = 0.9;
+const G_EXC = 9, G_INH = 15;
+const BG_RATE = 0.0035, BG_AMP = 4.5;
+const A_PLUS = 0.05, A_MINUS = 0.056, TAU_PRE = 20, TAU_POST = 20, LAMBDA_BAP = 4.5;
+const W_MAX = 2.6;
+const TAU_E = 6000, TAU_L = 900000;
+const RATE_TARGET = 5, TAU_RATE = 2000, ETA_H = 0.0004;
+
+const TYPES = {
+  RS:  { a: .02, b: .2,  c: -65, d: 8, exc: true  },
+  IB:  { a: .02, b: .2,  c: -55, d: 4, exc: true  },
+  CH:  { a: .02, b: .2,  c: -50, d: 2, exc: true  },
+  FS:  { a: .1,  b: .2,  c: -65, d: 2, exc: false },
+  LTS: { a: .02, b: .25, c: -65, d: 2, exc: false },
+};
+const TYPE_LABEL = {
+  RS: 'Regular-spiking pyramidal', IB: 'Intrinsically bursting pyramidal', CH: 'Chattering pyramidal',
+  FS: 'Fast-spiking basket cell', LTS: 'Low-threshold spiking interneuron',
+};
+
+/* ---------- small math ---------- */
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const sc = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const len = a => Math.hypot(a[0], a[1], a[2]);
+const norm = a => { const l = len(a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+function randUnit(rng) { const z = rng() * 2 - 1, t = rng() * Math.PI * 2, r = Math.sqrt(1 - z * z); return [r * Math.cos(t), z, r * Math.sin(t)]; }
+function rotAround(v, k, ang) {
+  const c = Math.cos(ang), s = Math.sin(ang), kd = dot(k, v), kx = cross(k, v);
+  return [v[0] * c + kx[0] * s + k[0] * kd * (1 - c), v[1] * c + kx[1] * s + k[1] * kd * (1 - c), v[2] * c + kx[2] * s + k[2] * kd * (1 - c)];
+}
+function perpOf(d) { return norm(cross(d, Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])); }
+
+/* ---------- dendrite morphology (local frame, apical = +y) ---------- */
+function growMorph(rng, exc) {
+  const nodes = [{ p: [0, 0, 0], parent: -1, dist: 0 }];
+  function branch(from, dir, L, segs, level) {
+    let prev = from, d = dir;
+    const sl = L / segs;
+    for (let s = 0; s < segs; s++) {
+      d = norm(add(d, sc(randUnit(rng), 0.32)));
+      nodes.push({ p: add(nodes[prev].p, sc(d, sl)), parent: prev, dist: nodes[prev].dist + sl });
+      prev = nodes.length - 1;
+    }
+    if (level > 0) {
+      const nk = rng() < 0.22 ? 3 : 2, perp = perpOf(d), spin = rng() * 6.283;
+      for (let k = 0; k < nk; k++) {
+        const side = rotAround(perp, d, spin + k * 6.283 / nk);
+        const a = 0.5 + rng() * 0.3;
+        branch(prev, norm(add(sc(d, Math.cos(a)), sc(side, Math.sin(a)))), L * 0.72, Math.max(1, segs - 1), level - 1);
+      }
+    }
+  }
+  if (exc) {
+    branch(0, [0, 1, 0], 4.4, 4, 2);                       // apical dendrite with tuft
+    const nb = 3 + (rng() < 0.5 ? 1 : 0), off = rng() * 6.283;
+    for (let k = 0; k < nb; k++) {                          // basal skirt
+      const a = off + k * 6.283 / nb + rng() * 0.5;
+      branch(0, norm([Math.cos(a), -0.55 - rng() * 0.45, Math.sin(a)]), 2.0, 2, 1);
+    }
+  } else {
+    const nb = 5 + (rng() < 0.5 ? 1 : 0);                   // compact stellate interneuron
+    for (let k = 0; k < nb; k++) branch(0, randUnit(rng), 1.7, 2, 1);
+  }
+  return nodes;
+}
+
+/* ---------- network geometries ---------- */
+function randType(rng, inh) { if (rng() < inh) return rng() < 0.7 ? 'FS' : 'LTS'; const e = rng(); return e < 0.6 ? 'RS' : e < 0.85 ? 'IB' : 'CH'; }
+function pickPace(rng, type, count, period) {
+  const out = [];
+  for (let tries = 0; out.length < count && tries < 999; tries++) {
+    const i = (rng() * type.length) | 0;
+    if (TYPES[type[i]].exc && !out.some(o => o[0] === i)) out.push([i, period[out.length]]);
+  }
+  return out;
+}
+
+const PRESETS = {
+  bloom: { label: 'Bloom', build(rng) {
+    const pos = [], R = 25, minD = 3.3;
+    for (let tries = 0; pos.length < 240 && tries < 200000; tries++) {
+      const p = [rng() * 2 - 1, rng() * 2 - 1, rng() * 2 - 1];
+      if (dot(p, p) > 1) continue;
+      const q = sc(p, R);
+      if (pos.every(o => (o[0] - q[0]) ** 2 + (o[1] - q[1]) ** 2 + (o[2] - q[2]) ** 2 > minD * minD)) pos.push(q);
+    }
+    const up = pos.map(p => len(p) < 5 ? randUnit(rng) : norm(add(norm(p), sc(randUnit(rng), 0.3))));
+    const type = pos.map(() => randType(rng, 0.2));
+    const hue = pos.map(p => 0.55 * (Math.atan2(p[2], p[0]) / 6.283 + 0.5) + 0.3 * (p[1] / R));
+    return { pos, up, type, hue, conn: { mode: 'random', sigma: 7.5, kIn: 14 }, morphScale: 0.85, pace: pickPace(rng, type, 2, [190, 290]) };
+  } },
+
+  torus: { label: 'Torus', build(rng) {
+    const pos = [], up = [], hue = [], theta = [], nT = 44, nP = 6, R = 30, r = 7.5;
+    for (let a = 0; a < nT; a++) for (let b = 0; b < nP; b++) {
+      const th = 6.283 * a / nT + (b % 2) * Math.PI / nT, ph = 6.283 * b / nP;
+      pos.push([(R + r * Math.cos(ph)) * Math.cos(th), r * Math.sin(ph), (R + r * Math.cos(ph)) * Math.sin(th)]);
+      up.push([Math.cos(ph) * Math.cos(th), Math.sin(ph), Math.cos(ph) * Math.sin(th)]);
+      hue.push(a / nT); theta.push(th);
+    }
+    const type = pos.map(() => randType(rng, 0.2));
+    const bias = (j, i) => { let d = theta[i] - theta[j]; d = Math.atan2(Math.sin(d), Math.cos(d)); return d > 0.02 ? 2.2 : 0.6; };
+    return { pos, up, type, hue, conn: { mode: 'random', sigma: 6.5, kIn: 13, bias }, morphScale: 0.85, pace: pickPace(rng, type, 1, [240]) };
+  } },
+
+  phyllo: { label: 'Phyllotaxis', build(rng) {
+    const pos = [], up = [], hue = [], N = 260, R = 26, ga = Math.PI * (3 - Math.sqrt(5));
+    for (let k = 0; k < N; k++) {
+      const y = 1 - 2 * (k + 0.5) / N, rr = Math.sqrt(1 - y * y), th = k * ga;
+      const p = [rr * Math.cos(th) * R, y * R, rr * Math.sin(th) * R];
+      pos.push(p); up.push(norm(p)); hue.push((y + 1) * 0.35 + ((th / 6.283) % 1) * 0.12);
+    }
+    const type = pos.map(() => randType(rng, 0.2));
+    return { pos, up, type, hue, conn: { mode: 'random', sigma: 6, kIn: 13 }, morphScale: 0.8, pace: pickPace(rng, type, 2, [210, 330]) };
+  } },
+
+  tree: { label: 'Fractal tree', build(rng) {
+    const pos = [], up = [], depth = [], parent = [];
+    (function grow(p, d, L, dep, par) {
+      const idx = pos.length; pos.push(p); up.push(d); depth.push(dep); parent.push(par);
+      if (dep >= 7) return;
+      const perp = perpOf(d), spin = dep * 2.39996 + rng() * 0.6;
+      for (let k = 0; k < 2; k++) {
+        const side = rotAround(perp, d, spin + k * Math.PI), a = 0.5 + rng() * 0.2;
+        const nd = norm(add(sc(d, Math.cos(a)), sc(side, Math.sin(a))));
+        grow(add(p, sc(nd, L)), nd, L * 0.8, dep + 1, idx);
+      }
+    })([0, 0, 0], [0, 1, 0], 10, 0, -1);
+    const type = pos.map((_, i) => i === 0 ? 'RS' : randType(rng, 0.15));
+    const hue = depth.map(d => d / 7 * 0.85);
+    const forced = pos.map((_, i) => parent[i] >= 0 ? [parent[i]] : []);
+    return { pos, up, type, hue, conn: { mode: 'random', sigma: 6, kIn: 9, forced, forcedGain: 1.9 }, morphScale: 0.8, pace: [[0, 260]] };
+  } },
+
+  mandala: { label: 'Mandala', build() {
+    const pos = [], up = [], hue = [], type = [], seeds = [];
+    const ringType = ['RS', 'IB', 'FS', 'RS', 'CH', 'FS'];
+    for (let layer = 0; layer < 2; layer++) {
+      const y = layer ? -3.6 : 3.6, s = layer ? -1 : 1;
+      for (let k = 0; k < 6; k++) {
+        const n = 6 * (k + 1), r = 4.5 + 6 * k;
+        for (let j = 0; j < n; j++) {
+          const a = 6.283 * j / n + (k % 2) * Math.PI / n;
+          pos.push([r * Math.cos(a), y, r * Math.sin(a)]);
+          up.push(norm([Math.cos(a) * 0.45, s, Math.sin(a) * 0.45]));
+          hue.push(k / 6.5 + layer * 0.08); type.push(ringType[k]); seeds.push(1000 + k * 7 + layer * 101);
+        }
+      }
+    }
+    const pace = []; for (let j = 0; j < 6; j++) pace.push([j, 300]);
+    return { pos, up, type, hue, morphSeed: seeds, symmetric: true, conn: { mode: 'cutoff', cutoff: 8.6 }, morphScale: 0.8, pace, drive: 0.15 };
+  } },
+};
+
+function csr(keys, n) {
+  const start = new Int32Array(n + 1);
+  for (let k = 0; k < keys.length; k++) start[keys[k] + 1]++;
+  for (let i = 0; i < n; i++) start[i + 1] += start[i];
+  const fill = start.slice(0, n), idx = new Int32Array(keys.length);
+  for (let k = 0; k < keys.length; k++) idx[fill[keys[k]]++] = k;
+  return { start, idx };
+}
+
+/* ---------- build a living network ---------- */
+function buildSim(presetKey, seed) {
+  const rng = mulberry32(seed >>> 0);
+  const pr = PRESETS[presetKey].build(rng);
+  const N = pr.pos.length;
+  // centre the specimen
+  const cen = [0, 0, 0]; pr.pos.forEach(p => { cen[0] += p[0] / N; cen[1] += p[1] / N; cen[2] += p[2] / N; });
+  const pos = pr.pos.map(p => sub(p, cen));
+  let extent = 0; pos.forEach(p => { extent = Math.max(extent, len(p)); });
+
+  const typeName = pr.type, exc = new Uint8Array(N);
+  const pa = new Float32Array(N), pb = new Float32Array(N), pc = new Float32Array(N), pd = new Float32Array(N);
+  const somaPos = new Float32Array(N * 3), hBase = new Float32Array(N);
+  const somaNode = new Int32Array(N), nodeStart = new Int32Array(N), nodeEnd = new Int32Array(N);
+  const nx = [], ny = [], nz = [], npar = [], nneu = [], ndist = [];
+  const S = pr.morphScale;
+
+  for (let i = 0; i < N; i++) {
+    const T = TYPES[typeName[i]];
+    exc[i] = T.exc ? 1 : 0; pa[i] = T.a; pb[i] = T.b; pc[i] = T.c; pd[i] = T.d;
+    somaPos[i * 3] = pos[i][0]; somaPos[i * 3 + 1] = pos[i][1]; somaPos[i * 3 + 2] = pos[i][2];
+    hBase[i] = pr.hue[i];
+    const mr = pr.morphSeed ? mulberry32(pr.morphSeed[i]) : rng;
+    const m = growMorph(mr, T.exc);
+    const u = norm(pr.up[i]);
+    const a = norm(cross(Math.abs(u[1]) < 0.97 ? [0, 1, 0] : [1, 0, 0], u)), b = cross(u, a);
+    const base = nx.length;
+    nodeStart[i] = base; somaNode[i] = base; nodeEnd[i] = base + m.length;
+    for (const nd of m) {
+      const p = nd.p;
+      nx.push(pos[i][0] + (a[0] * p[0] + u[0] * p[1] + b[0] * p[2]) * S);
+      ny.push(pos[i][1] + (a[1] * p[0] + u[1] * p[1] + b[1] * p[2]) * S);
+      nz.push(pos[i][2] + (a[2] * p[0] + u[2] * p[1] + b[2] * p[2]) * S);
+      npar.push(nd.parent < 0 ? -1 : base + nd.parent); nneu.push(i); ndist.push(nd.dist);
+    }
+  }
+  const nNodes = nx.length;
+  const nodePos = new Float32Array(nNodes * 3);
+  for (let n = 0; n < nNodes; n++) { nodePos[n * 3] = nx[n]; nodePos[n * 3 + 1] = ny[n]; nodePos[n * 3 + 2] = nz[n]; }
+  const par = Int32Array.from(npar), nNeuron = Int32Array.from(nneu), nDist = Float32Array.from(ndist);
+  const dfac = new Float32Array(nNodes);
+  for (let n = 0; n < nNodes; n++) dfac[n] = Math.min(1, nDist[n] / 5);
+  const NSl = []; for (let n = 0; n < nNodes; n++) if (par[n] >= 0) NSl.push(n);
+  const NS = Int32Array.from(NSl), nNS = NS.length;
+
+  /* ---- wiring ---- */
+  const sPre = [], sPost = [], sNode = [], sW0 = [];
+  const conn = pr.conn;
+  const d2s = (i, j) => (pos[i][0] - pos[j][0]) ** 2 + (pos[i][1] - pos[j][1]) ** 2 + (pos[i][2] - pos[j][2]) ** 2;
+  function pickNode(j, i) {
+    const cands = [];
+    for (let n = nodeStart[i] + 1; n < nodeEnd[i]; n++) {
+      if (!exc[j] && nDist[n] > 1.8) continue;           // basket cells grab the perisomatic region
+      const dx = nx[n] - pos[j][0], dy = ny[n] - pos[j][1], dz = nz[n] - pos[j][2];
+      cands.push([dx * dx + dy * dy + dz * dz, n]);
+    }
+    if (!cands.length) return nodeStart[i] + 1;
+    cands.sort((p, q) => p[0] - q[0]);
+    if (pr.symmetric) return cands[0][1];
+    return cands[Math.floor(rng() * rng() * Math.min(4, cands.length))][1];
+  }
+  for (let i = 0; i < N; i++) {
+    const chosen = new Map();
+    if (conn.forced) for (const j of conn.forced[i]) chosen.set(j, conn.forcedGain || 1);
+    if (conn.mode === 'cutoff') {
+      for (let j = 0; j < N; j++) if (j !== i && d2s(i, j) < conn.cutoff * conn.cutoff) chosen.set(j, 1);
+    } else {
+      const w = new Float64Array(N); let tot = 0;
+      const lim = (3.2 * conn.sigma) ** 2;
+      for (let j = 0; j < N; j++) {
+        if (j === i || chosen.has(j)) continue;
+        const d2 = d2s(i, j); if (d2 > lim) continue;
+        w[j] = Math.exp(-Math.sqrt(d2) / conn.sigma) * (conn.bias ? conn.bias(j, i) : 1); tot += w[j];
+      }
+      let need = conn.kIn - chosen.size;
+      while (need-- > 0 && tot > 1e-9) {
+        let r = rng() * tot, j = 0;
+        for (; j < N; j++) { r -= w[j]; if (r <= 0 && w[j] > 0) break; }
+        if (j >= N) break;
+        chosen.set(j, 1); tot -= w[j]; w[j] = 0;
+      }
+    }
+    for (const [j, g] of chosen) {
+      sPre.push(j); sPost.push(i); sNode.push(pickNode(j, i));
+      const base = exc[j] ? (pr.symmetric ? 1.0 : 0.7 + 0.5 * rng()) : (pr.symmetric ? 1.2 : 1.0 + 0.4 * rng());
+      sW0.push(Math.min(W_MAX, base * g));
+    }
+  }
+  const nS = sPre.length;
+  const pre = Int32Array.from(sPre), post = Int32Array.from(sPost), node = Int32Array.from(sNode), w0 = Float32Array.from(sW0);
+  const sgn = new Int8Array(nS), U = new Float32Array(nS), tD = new Float32Array(nS), tF = new Float32Array(nS);
+  const ctrl = new Float32Array(nS * 9), delayS = new Int32Array(nS), attB = new Float32Array(nS);
+  let maxDelay = 1;
+  for (let s = 0; s < nS; s++) {
+    const j = pre[s], i = post[s];
+    sgn[s] = exc[j] ? 1 : -1;
+    let u0, d0, f0;
+    if (!exc[j]) { u0 = .25; d0 = 300; f0 = 20; }
+    else if (typeName[i] === 'LTS') { u0 = .08; d0 = 120; f0 = 700; }      // facilitating onto SOM-like cells
+    else if (!exc[i]) { u0 = .5; d0 = 350; f0 = 20; }                       // depressing onto basket cells
+    else if (!pr.symmetric && rng() < 0.3) { u0 = .15; d0 = 150; f0 = 500; }
+    else { u0 = .45; d0 = 450; f0 = 40; }
+    U[s] = u0; tD[s] = d0; tF[s] = f0;
+    attB[s] = Math.exp(-nDist[node[s]] / LAMBDA_BAP);
+    // axon as a quadratic bezier from presynaptic soma to the synapse
+    const p0 = pos[j], p2 = [nx[node[s]], ny[node[s]], nz[node[s]]], dvec = sub(p2, p0), L = len(dvec) || 1;
+    const side = pr.symmetric ? perpOf(norm(dvec)) : norm(cross(dvec, randUnit(rng)));
+    const p1 = add(sc(add(p0, p2), 0.5), sc(side, L * (pr.symmetric ? 0.22 : 0.15 + 0.2 * rng())));
+    ctrl.set([p0[0], p0[1], p0[2], p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]], s * 9);
+    const delay = 3 + 1.5 * L * 1.08;
+    delayS[s] = Math.max(1, Math.round(delay / DT)); maxDelay = Math.max(maxDelay, delayS[s]);
+  }
+  const outC = csr(pre, N), inC = csr(post, N), nodeC = csr(node, nNodes);
+
+  /* ---- state ---- */
+  const v = new Float32Array(N).fill(-70), u = new Float32Array(N);
+  for (let i = 0; i < N; i++) { u[i] = pb[i] * -70; v[i] = -70 + Math.random() * 8; }
+  const bias = new Float32Array(N).fill(2.5), rate = new Float32Array(N), lastSpike = new Float64Array(N).fill(-1e9);
+  const isiEst = new Float32Array(N).fill(200), yPost = new Float32Array(N), lastPost = new Float64Array(N).fill(-1e9);
+  const stim = new Float32Array(N), pace = new Float32Array(N), nextPace = new Float64Array(N), pulse = new Float32Array(N);
+  const dead = new Uint8Array(N), flash = new Float32Array(N), Isoma = new Float32Array(N);
+  const V = new Float32Array(nNodes), dV = new Float32Array(nNodes), Isyn = new Float32Array(nNodes), glu = new Float32Array(nNodes);
+  const nm = new Float32Array(nNodes), refN = new Float32Array(nNodes), ext = new Float32Array(nNodes);
+  const dsTr = new Float32Array(nNodes), dsT = new Float64Array(nNodes).fill(-1e9);
+  const stx = new Float32Array(nS).fill(1), stu = Float32Array.from(U), lastT = new Float64Array(nS).fill(-1e9);
+  const preTr = new Float32Array(nS), preT = new Float64Array(nS).fill(-1e9);
+  const eW = new Float32Array(nS), lW = new Float32Array(nS), synFlash = new Float32Array(nS);
+  const NB = maxDelay + 2, buckets = []; for (let k = 0; k < NB; k++) buckets.push([]);
+  const TRACE = 600, trace = new Float32Array(TRACE);
+
+  const sim = {
+    preset: presetKey, label: PRESETS[presetKey].label, N, nNodes, nNS, nS, extent, symmetric: !!pr.symmetric, presetDrive: pr.drive,
+    typeName, exc, somaPos, hBase, somaNode, nodeStart, nodeEnd, nodePos, par, nNeuron, nDist, NS,
+    pre, post, node, sgn, w0, eW, lW, ctrl, delayS, outC, inC,
+    v, u, bias, rate, lastSpike, isiEst, stim, pace, nextPace, dead, flash, V, nm, glu, ext, synFlash,
+    t: 0, stepIdx: 0, spikes: 0, dSpikes: 0, sel: -1, trace, traceIdx: 0, TRACE, onSpike: null,
+  };
+
+  function weight(s) { const w = w0[s] + eW[s] + lW[s]; return w < 0 ? 0 : w > W_MAX ? W_MAX : w; }
+  function addW(s, dw) {
+    const base = w0[s] + lW[s]; let e = eW[s] + dw;
+    if (base + e > W_MAX) e = W_MAX - base; else if (base + e < 0) e = -base;
+    eW[s] = e;
+  }
+  function arrive(s, t) {
+    const dtl = t - lastT[s];
+    let xx = 1 - (1 - stx[s]) * Math.exp(-dtl / tD[s]);
+    let uu = U[s] + (stu[s] - U[s]) * Math.exp(-dtl / tF[s]);
+    uu += U[s] * (1 - uu);
+    const rel = uu * xx;
+    stx[s] = xx - rel; stu[s] = uu; lastT[s] = t;
+    const w = weight(s), n = node[s], q = w * rel;
+    if (q > synFlash[s]) synFlash[s] = q;
+    if (sgn[s] > 0) {
+      Isyn[n] += G_EXC * q; glu[n] += q;
+      preTr[s] = preTr[s] * Math.exp(-(t - preT[s]) / TAU_PRE) + 1; preT[s] = t;
+      if (P.lr > 0) {
+        const j = post[s];
+        const y = yPost[j] * Math.exp(-(t - lastPost[j]) / TAU_POST) * attB[s] + dsTr[n] * Math.exp(-(t - dsT[n]) / TAU_POST);
+        if (y > 0.02) addW(s, -A_MINUS * P.lr * y);
+      }
+    } else {
+      Isyn[n] -= G_INH * P.inhib * q;
+    }
+  }
+  function dendSpike(n, t) {
+    dsTr[n] = dsTr[n] * Math.exp(-(t - dsT[n]) / TAU_POST) + 1; dsT[n] = t;
+    if (P.lr <= 0) return;
+    for (let k = nodeC.start[n]; k < nodeC.start[n + 1]; k++) {
+      const s = nodeC.idx[k]; if (sgn[s] < 0) continue;
+      const pt = preTr[s] * Math.exp(-(t - preT[s]) / TAU_PRE);
+      if (pt > 0.02) addW(s, A_PLUS * P.lr * pt);
+    }
+  }
+  function spike(i, t) {
+    v[i] = pc[i]; u[i] += pd[i];
+    const isi = t - lastSpike[i]; if (isi < 3000) isiEst[i] = 0.7 * isiEst[i] + 0.3 * isi;
+    lastSpike[i] = t; flash[i] = 1; rate[i] += 1000 / TAU_RATE; sim.spikes++;
+    yPost[i] = yPost[i] * Math.exp(-(t - lastPost[i]) / TAU_POST) + 1; lastPost[i] = t;
+    for (let k = outC.start[i]; k < outC.start[i + 1]; k++) {
+      const s = outC.idx[k]; buckets[(sim.stepIdx + delayS[s]) % NB].push(s);
+    }
+    if (P.lr > 0) for (let k = inC.start[i]; k < inC.start[i + 1]; k++) {
+      const s = inC.idx[k]; if (sgn[s] < 0) continue;
+      const pt = preTr[s] * Math.exp(-(t - preT[s]) / TAU_PRE);
+      if (pt > 0.02) addW(s, A_PLUS * P.lr * pt * attB[s]);
+    }
+    if (sim.onSpike) sim.onSpike(i, t);
+  }
+  // back-propagating action potential: a pulse travelling out from the soma, shrinking with distance
+  function bapAt(n, t) {
+    const el = t - lastSpike[nNeuron[n]] - nDist[n] * BAP_DELAY;
+    if (el < 0 || el > 12) return 0;
+    return BAP * Math.exp(-nDist[n] / LAMBDA_BAP) * Math.exp(-el / 2.5);
+  }
+  sim.bapAt = bapAt;
+  let spare = null;
+  function gauss() {
+    if (spare !== null) { const g = spare; spare = null; return g; }
+    let a, b, r; do { a = Math.random() * 2 - 1; b = Math.random() * 2 - 1; r = a * a + b * b; } while (r >= 1 || r === 0);
+    const f = Math.sqrt(-2 * Math.log(r) / r); spare = b * f; return a * f;
+  }
+
+  sim.step = function () {
+    const t = sim.t;
+    const bucket = buckets[sim.stepIdx % NB];
+    for (let k = 0; k < bucket.length; k++) arrive(bucket[k], t);
+    bucket.length = 0;
+
+    let mod = 0, bgMul = 1;
+    if (P.sleep) { const up = Math.sin(6.283 * t / 1600) > 0.2; mod = up ? 1.5 : -7; bgMul = up ? 1.4 : 0.05; }
+
+    // background bombardment from unseen inputs
+    let cnt = Math.floor(P.drive * bgMul * BG_RATE * nNS * DT + Math.random());
+    while (cnt-- > 0) { const n = NS[(Math.random() * nNS) | 0]; const q = BG_AMP * (0.4 + Math.random()); Isyn[n] += q; glu[n] += 0.06 * q; }
+
+    // cable equation on every dendritic tree; soma acts as a voltage source
+    for (let i = 0; i < N; i++) { const vv = v[i] + 70; V[somaNode[i]] = vv < -15 ? -15 : vv > 110 ? 110 : vv; Isoma[i] = 0; }
+    const g = P.coupling, nsub = Math.max(4, Math.ceil(g * 4)), h = DT / nsub, psy = P.psy;
+    for (let sub = 0; sub < nsub; sub++) {
+      dV.fill(0);
+      for (let k = 0; k < nNS; k++) { const n = NS[k], p = par[n]; const f = g * (V[p] - V[n]); dV[n] += f; dV[p] -= f; }
+      for (let k = 0; k < nNS; k++) {
+        const n = NS[k], vn = V[n];
+        V[n] = vn + h * (dV[n] - vn * INV_TAU_M + Isyn[n] + ext[n] + GN * (1 + psy * 0.7 * dfac[n]) * nm[n] * (EN - vn));
+      }
+      for (let i = 0; i < N; i++) Isoma[i] += dV[somaNode[i]];
+    }
+
+    // synaptic decay + NMDA plateaus (need glutamate AND depolarisation)
+    const dS = Math.exp(-DT / TAU_SYN), dG = Math.exp(-DT / TAU_GLU), dN = Math.exp(-DT / TAU_N), th0 = P.nmdaTh;
+    for (let k = 0; k < nNS; k++) {
+      const n = NS[k];
+      Isyn[n] *= dS; glu[n] *= dG;
+      nm[n] = nm[n] > 0.003 ? nm[n] * dN : 0;
+      if (refN[n] > 0) { refN[n] -= DT; continue; }
+      if (glu[n] <= GLU_MIN * (1 - psy * 0.4 * dfac[n])) continue;
+      const vb = V[n] + bapAt(n, t);   // back-propagating AP adds depolarisation for coincidence detection
+      if (vb > th0 * (1 - psy * 0.55 * dfac[n])) {
+        nm[n] = 1; refN[n] = REFR_N; sim.dSpikes++; dendSpike(n, t);
+      }
+    }
+
+    // Izhikevich somata
+    const noiseSd = 2.2 * Math.sqrt(P.drive * bgMul);
+    for (let i = 0; i < N; i++) {
+      if (dead[i]) { v[i] = -70; u[i] = pb[i] * -70; continue; }
+      let I = K_SOMA * Isoma[i] / nsub + bias[i] + stim[i] + mod + (noiseSd > 0 ? noiseSd * gauss() : 0) + psy * 1.5;
+      if (pace[i] > 0 && t >= nextPace[i]) { pulse[i] = 2.5; nextPace[i] = t + pace[i]; }
+      if (pulse[i] > 0) { I += 48; pulse[i] -= DT; }
+      let vv = v[i]; const uu = u[i];
+      vv += 0.25 * (0.04 * vv * vv + 5 * vv + 140 - uu + I);
+      if (vv < 30) vv += 0.25 * (0.04 * vv * vv + 5 * vv + 140 - uu + I);
+      u[i] = uu + DT * pa[i] * (pb[i] * vv - uu);
+      if (vv >= 30) { v[i] = vv; spike(i, t); } else v[i] = vv;
+      rate[i] -= rate[i] * DT / TAU_RATE;
+      if (!pace[i]) { let bb = bias[i] + DT * ETA_H * (RATE_TARGET - rate[i]); bias[i] = bb < -14 ? -14 : bb > 16 ? 16 : bb; }
+    }
+    if (sim.sel >= 0) { sim.trace[sim.traceIdx % TRACE] = v[sim.sel]; sim.traceIdx++; }
+
+    // early -> late consolidation (synaptic tagging and capture, simplified)
+    if (sim.stepIdx % 10 === 0) {
+      const dtc = DT * 10, kc = P.consol * (P.sleep ? 10 : 1) / 12000 * dtc, de = dtc / TAU_E, dl = dtc / TAU_L;
+      for (let s = 0; s < nS; s++) {
+        const e = eW[s];
+        if (e !== 0) { const tr = kc * e; eW[s] = e - tr - e * de; lW[s] += tr; }
+        if (lW[s] !== 0) lW[s] -= lW[s] * dl;
+      }
+    }
+    sim.t = t + DT; sim.stepIdx++;
+  };
+
+  sim.weight = weight;
+  sim.clearMemories = function () { eW.fill(0); lW.fill(0); };
+  for (const [i, per] of (pr.pace || [])) { pace[i] = per; nextPace[i] = 40 + Math.random() * 60 * (pr.symmetric ? 0 : 1); }
+  if (pr.symmetric) for (const [i] of pr.pace) nextPace[i] = 40;
+  return sim;
+}
+
+global.DG = { P, PRESETS, buildSim, DT, TYPE_LABEL, W_MAX };
+})(typeof window !== 'undefined' ? window : globalThis);
+// ==SIM-END==
+</script>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { AfterimagePass } from 'three/addons/postprocessing/AfterimagePass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const { P, PRESETS, buildSim, DT, TYPE_LABEL } = window.DG;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+
+/* ---------- visual parameters ---------- */
+const VIS = {
+  speed: reduceMotion ? 0.3 : 0.5, bloom: 0.85, trails: reduceMotion ? 0.4 : 0.82, phaseAmt: 0.35, drift: 0.15,
+  palette: 'Nebula', axons: true, synapses: true, comets: true, autoRotate: !reduceMotion, paceHz: 4,
+  somaSize: 1, denThick: 1,
+};
+const PALETTES = {
+  Nebula: { a: [.5, .5, .5], b: [.5, .5, .5], c: [1, 1, 1], d: [0, .33, .67] },
+  Lagoon: { a: [.5, .5, .5], b: [.5, .5, .5], c: [1, 1, .5], d: [.8, .9, .3] },
+  Ember:  { a: [.5, .5, .5], b: [.5, .5, .5], c: [1, .7, .4], d: [0, .15, .2] },
+  Abyss:  { a: [.5, .5, .5], b: [.5, .5, .5], c: [2, 1, 0], d: [.5, .2, .25] },
+  Opal:   { a: [.8, .5, .4], b: [.2, .4, .2], c: [2, 1, 1], d: [0, .25, .25] },
+};
+const LUT = new Float32Array(256 * 3);
+function setPalette(name) {
+  VIS.palette = name; const p = PALETTES[name];
+  for (let k = 0; k < 256; k++) {
+    const t = k / 255;
+    for (let c = 0; c < 3; c++) LUT[k * 3 + c] = Math.max(0, p.a[c] + p.b[c] * Math.cos(6.28318 * (p.c[c] * t + p.d[c])));
+  }
+}
+setPalette(VIS.palette);
+const lutK = t => (((t - Math.floor(t)) * 255) | 0) * 3;
+
+/* ---------- renderer ---------- */
+const stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+renderer.setSize(innerWidth, innerHeight);
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x030209);
+const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.5, 900);
+camera.position.set(0, 16, 84);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.07;
+controls.autoRotate = VIS.autoRotate; controls.autoRotateSpeed = 0.35;
+controls.minDistance = 8; controls.maxDistance = 260;
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const afterPass = new AfterimagePass(VIS.trails);
+composer.addPass(afterPass);
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), VIS.bloom, 0.55, 0.0);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
+
+const glowVert = `
+attribute vec3 aColor; attribute float aSize; attribute float aShape;
+uniform float uScale; uniform float uMax;
+varying vec3 vColor; varying float vShape;
+void main(){
+  vec4 mv = modelViewMatrix * vec4(position,1.0);
+  gl_Position = projectionMatrix * mv;
+  gl_PointSize = min(uMax, aSize * uScale / max(0.1, -mv.z));
+  vColor = aColor; vShape = aShape;
+}`;
+const glowFrag = `
+varying vec3 vColor; varying float vShape;
+void main(){
+  vec2 p = gl_PointCoord * 2.0 - 1.0;
+  float r2 = dot(p,p);
+  if (r2 > 1.0) discard;
+  float a;
+  if (vShape > 1.5) {                        // ring
+    float r = sqrt(r2);
+    a = exp(-pow((r - 0.78) * 11.0, 2.0)) + 0.15 * exp(-r2 * 8.0);
+  } else {                                   // soft core + crystal star
+    float core = exp(-r2 * 7.0);
+    float star = exp(-abs(p.x) * 16.0) * exp(-abs(p.y) * 2.2) + exp(-abs(p.y) * 16.0) * exp(-abs(p.x) * 2.2);
+    float diag = exp(-abs(p.x - p.y) * 14.0) * exp(-abs(p.x + p.y) * 3.0) + exp(-abs(p.x + p.y) * 14.0) * exp(-abs(p.x - p.y) * 3.0);
+    a = core + vShape * (0.9 * star + 0.35 * diag);
+  }
+  a *= 1.0 - r2 * r2;
+  gl_FragColor = vec4(vColor * a, 1.0);
+}`;
+const glowMats = [];
+function glowMaterial() {
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uScale: { value: 1 }, uMax: { value: 180 } }, vertexShader: glowVert, fragmentShader: glowFrag,
+    blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true,
+  });
+  glowMats.push(m); return m;
+}
+function updatePointScale() {
+  const s = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  for (const m of glowMats) m.uniforms.uScale.value = s;
+}
+function dynAttr(geo, name, arr, size) {
+  const a = new THREE.BufferAttribute(arr, size); a.setUsage(THREE.DynamicDrawUsage); geo.setAttribute(name, a); return a;
+}
+function pointsObject(count) {
+  const geo = new THREE.BufferGeometry();
+  const o = {
+    pos: dynAttr(geo, 'position', new Float32Array(count * 3), 3),
+    col: dynAttr(geo, 'aColor', new Float32Array(count * 3), 3),
+    size: dynAttr(geo, 'aSize', new Float32Array(count), 1),
+    shape: dynAttr(geo, 'aShape', new Float32Array(count), 1),
+  };
+  o.mesh = new THREE.Points(geo, glowMaterial()); o.mesh.frustumCulled = false; o.geo = geo;
+  return o;
+}
+function linesObject(vertCount) {
+  const geo = new THREE.BufferGeometry();
+  const o = { pos: dynAttr(geo, 'position', new Float32Array(vertCount * 3), 3), col: dynAttr(geo, 'color', new Float32Array(vertCount * 3), 3) };
+  o.mesh = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, depthTest: false }));
+  o.mesh.frustumCulled = false; o.geo = geo;
+  return o;
+}
+
+/* sheet of light for the optogenetic sweep */
+const sweepMat = new THREE.ShaderMaterial({
+  uniforms: { uColor: { value: new THREE.Color(0.5, 0.8, 1) }, uAlpha: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+  fragmentShader: 'varying vec2 vUv; uniform vec3 uColor; uniform float uAlpha; void main(){ float d=length(vUv-0.5)*2.0; float a=uAlpha*smoothstep(1.0,0.0,d); float lines=0.6+0.4*sin(vUv.y*240.0); gl_FragColor=vec4(uColor*a*lines,1.0); }',
+  blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, side: THREE.DoubleSide,
+});
+const sweepMesh = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), sweepMat);
+sweepMesh.visible = false; sweepMesh.frustumCulled = false; scene.add(sweepMesh);
+
+/* ---------- world: simulation + its visual twin ---------- */
+const MAXP = 7000, TAIL = 4;
+let sim = null, W = null, seed = 7;
+let presetKey = 'bloom';
+const frameSpikes = [];
+
+function buildWorld() {
+  if (W) { scene.remove(W.group); W.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { const k = glowMats.indexOf(o.material); if (k >= 0) glowMats.splice(k, 1); o.material.dispose(); } }); }
+  sim = buildSim(presetKey, seed);
+  if (sim.presetDrive !== undefined) { P.drive = sim.presetDrive; syncSlider('drive'); }
+  else if (P.drive < 0.5 && lastPresetWasLowDrive) { P.drive = 1; syncSlider('drive'); }
+  lastPresetWasLowDrive = sim.presetDrive !== undefined;
+  const group = new THREE.Group();
+  const w = { group };
+  const { N, nNS, nS, NS, par, nodePos } = sim;
+
+  // dendrite filaments + pearls
+  w.den = linesObject(nNS * 2);
+  w.pearl = pointsObject(nNS * 2);
+  w.pearlBase = new Float32Array(nNS * 2);
+  for (let k = 0; k < nNS; k++) {
+    const n = NS[k], p = par[n];
+    w.den.pos.array.set([nodePos[p * 3], nodePos[p * 3 + 1], nodePos[p * 3 + 2], nodePos[n * 3], nodePos[n * 3 + 1], nodePos[n * 3 + 2]], k * 6);
+    w.pearl.pos.array.set([nodePos[n * 3], nodePos[n * 3 + 1], nodePos[n * 3 + 2],
+      (nodePos[n * 3] + nodePos[p * 3]) / 2, (nodePos[n * 3 + 1] + nodePos[p * 3 + 1]) / 2, (nodePos[n * 3 + 2] + nodePos[p * 3 + 2]) / 2], k * 6);
+    const taper = 0.36 * (1 - 0.55 * Math.min(1, sim.nDist[n] / 7)) + 0.07;
+    w.pearlBase[k * 2] = taper; w.pearlBase[k * 2 + 1] = taper * 0.8;
+  }
+  w.den.pos.needsUpdate = w.pearl.pos.needsUpdate = true;
+
+  // somata (+ a ring layer for pacemakers and the probed cell)
+  w.soma = pointsObject(N * 2);
+  for (let i = 0; i < N; i++) for (let r = 0; r < 2; r++) w.soma.pos.array.set(sim.somaPos.subarray(i * 3, i * 3 + 3), (i + r * N) * 3);
+  for (let i = 0; i < N; i++) w.soma.shape.array[N + i] = 2;
+  w.soma.pos.needsUpdate = w.soma.shape.needsUpdate = true;
+
+  // synapse beads
+  w.syn = pointsObject(nS);
+  const jr = mulberryLite(seed * 31 + 7);
+  for (let s = 0; s < nS; s++) {
+    const n = sim.node[s];
+    w.syn.pos.array.set([nodePos[n * 3] + (jr() - .5) * .5, nodePos[n * 3 + 1] + (jr() - .5) * .5, nodePos[n * 3 + 2] + (jr() - .5) * .5], s * 3);
+  }
+  w.syn.pos.needsUpdate = true;
+
+  // axons as curves
+  const SEG = 8; w.SEG = SEG;
+  w.ax = linesObject(nS * SEG * 2);
+  const c = sim.ctrl, ap = w.ax.pos.array;
+  for (let s = 0; s < nS; s++) for (let k = 0; k < SEG; k++) for (let e = 0; e < 2; e++) {
+    const tt = (k + e) / SEG, a0 = (1 - tt) * (1 - tt), a1 = 2 * (1 - tt) * tt, a2 = tt * tt, o = ((s * SEG + k) * 2 + e) * 3;
+    ap[o] = a0 * c[s * 9] + a1 * c[s * 9 + 3] + a2 * c[s * 9 + 6];
+    ap[o + 1] = a0 * c[s * 9 + 1] + a1 * c[s * 9 + 4] + a2 * c[s * 9 + 7];
+    ap[o + 2] = a0 * c[s * 9 + 2] + a1 * c[s * 9 + 5] + a2 * c[s * 9 + 8];
+  }
+  w.ax.pos.needsUpdate = true;
+
+  // spikes in flight
+  w.comet = pointsObject(MAXP * TAIL);
+  w.pS = new Int32Array(MAXP); w.pT0 = new Float64Array(MAXP); w.pDur = new Float32Array(MAXP); w.pN = 0;
+
+  // brush cursor
+  w.cursor = pointsObject(1); w.cursor.shape.array[0] = 2; w.cursor.shape.needsUpdate = true;
+
+  group.add(w.ax.mesh, w.den.mesh, w.pearl.mesh, w.syn.mesh, w.comet.mesh, w.soma.mesh, w.cursor.mesh);
+  scene.add(group);
+  w.nodeCol = new Float32Array(sim.nNodes * 3);
+  w.tint = new Float32Array(N);
+  w.noteIdx = new Uint8Array(N);
+  for (let i = 0; i < N; i++) w.noteIdx[i] = Math.floor(((sim.hBase[i] % 1) + 1) % 1 * 12.99);
+  W = w;
+  updatePointScale();
+  applyVisibility();
+
+  sim.onSpike = (i, t) => {
+    frameSpikes.push(i, t);
+    if (!VIS.comets) return;
+    const oc = sim.outC;
+    for (let k = oc.start[i]; k < oc.start[i + 1]; k++) {
+      if (W.pN >= MAXP) break;
+      const s = oc.idx[k], q = W.pN++;
+      W.pS[q] = s; W.pT0[q] = t; W.pDur[q] = sim.delayS[s] * DT;
+    }
+  };
+  // frame the specimen
+  const dist = sim.extent * 2.6 + 18;
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  controls.target.set(0, 0, 0); camera.position.copy(dir.multiplyScalar(dist));
+  $('stN').textContent = sim.N;
+  rasterReset();
+  selectNeuron(-1);
+  document.querySelectorAll('#presets .chip').forEach(b => b.classList.toggle('on', b.dataset.key === presetKey));
+}
+let lastPresetWasLowDrive = false;
+function mulberryLite(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function applyVisibility() { if (!W) return; W.ax.mesh.visible = VIS.axons; W.syn.mesh.visible = VIS.synapses; W.comet.mesh.visible = VIS.comets; if (!VIS.comets) W.pN = 0; }
+
+/* ---------- per-frame colouring ---------- */
+function updateVisuals(simDt, realT) {
+  const S = sim, w = W, N = S.N, L = LUT;
+  const hueOff = realT * (VIS.drift + P.psy * 0.35) * 0.04;
+  const fd = Math.exp(-simDt / 24), sd = Math.exp(-simDt / 30);
+  const tint = w.tint;
+  for (let i = 0; i < N; i++) {
+    let ph = (S.t - S.lastSpike[i]) / Math.max(20, S.isiEst[i]); if (ph > 1.4) ph = 1.4;
+    tint[i] = S.hBase[i] + hueOff + VIS.phaseAmt * ph * 0.55;
+  }
+  // nodes
+  const nc = w.nodeCol, V = S.V, nm = S.nm, nNeuron = S.nNeuron, dead = S.dead;
+  for (let n = 0, nn = S.nNodes; n < nn; n++) {
+    const i = nNeuron[n], o = n * 3;
+    if (dead[i]) { nc[o] = nc[o + 1] = nc[o + 2] = 0.018; continue; }
+    const vn = V[n] + 0.8 * S.bapAt(n, S.t), m = nm[n];
+    let a = vn / 30;
+    if (a >= 0) {
+      if (a > 1.6) a = 1.6;
+      const k = lutK(tint[i] + 0.07 * a + 0.24 * m), b = 0.012 + 0.55 * a + 1.0 * m, wh = 0.4 * m * m + 0.08 * a * a;
+      nc[o] = L[k] * b + wh; nc[o + 1] = L[k + 1] * b + wh * 0.8; nc[o + 2] = L[k + 2] * b + wh;
+    } else {
+      if (a < -1.2) a = -1.2;
+      const k = lutK(tint[i] + 0.5), b = -a * 0.75;
+      nc[o] = L[k] * b * 0.5 + 0.004; nc[o + 1] = L[k + 1] * b * 0.6 + 0.004; nc[o + 2] = L[k + 2] * b * 1.1 + 0.008;
+    }
+  }
+  // filaments and pearls
+  const thB = 1 / Math.sqrt(VIS.denThick);
+  const NS = S.NS, par = S.par, dc = w.den.col.array, pc = w.pearl.col.array, ps = w.pearl.size.array, pb = w.pearlBase;
+  for (let k = 0, kk = S.nNS; k < kk; k++) {
+    const n = NS[k], p = par[n], on = n * 3, op = p * 3, o6 = k * 6;
+    dc[o6] = nc[op] * 0.6 + 0.004; dc[o6 + 1] = nc[op + 1] * 0.6 + 0.004; dc[o6 + 2] = nc[op + 2] * 0.6 + 0.006;
+    dc[o6 + 3] = nc[on] * 0.6 + 0.004; dc[o6 + 4] = nc[on + 1] * 0.6 + 0.004; dc[o6 + 5] = nc[on + 2] * 0.6 + 0.006;
+    pc[o6] = nc[on] * thB; pc[o6 + 1] = nc[on + 1] * thB; pc[o6 + 2] = nc[on + 2] * thB;
+    pc[o6 + 3] = (nc[on] + nc[op]) * 0.5 * thB; pc[o6 + 4] = (nc[on + 1] + nc[op + 1]) * 0.5 * thB; pc[o6 + 5] = (nc[on + 2] + nc[op + 2]) * 0.5 * thB;
+    let act = V[n] / 30; act = act < 0 ? 0 : act > 1 ? 1 : act;
+    const grow = (1 + 0.6 * act + 0.9 * nm[n]) * VIS.denThick;
+    ps[k * 2] = pb[k * 2] * grow; ps[k * 2 + 1] = pb[k * 2 + 1] * grow;
+  }
+  w.den.col.needsUpdate = w.pearl.col.needsUpdate = w.pearl.size.needsUpdate = true;
+
+  // somata
+  const sc = w.soma.col.array, ss = w.soma.size.array, fl = S.flash;
+  for (let i = 0; i < N; i++) {
+    fl[i] *= fd;
+    const f = fl[i], o = i * 3, ro = (N + i) * 3;
+    if (dead[i]) { sc[o] = sc[o + 1] = sc[o + 2] = 0.06; ss[i] = 0.9 * VIS.somaSize; }
+    else {
+      const k = lutK(tint[i]), b = 0.1 + 2.2 * f + 0.02 * Math.min(10, S.rate[i]), wh = 1.1 * f * f;
+      sc[o] = L[k] * b + wh; sc[o + 1] = L[k + 1] * b + wh; sc[o + 2] = L[k + 2] * b + wh;
+      ss[i] = (S.exc[i] ? 1.5 : 1.1) * (1 + 1.1 * f) * VIS.somaSize;
+    }
+    if (i === S.sel) { sc[ro] = 0.9; sc[ro + 1] = 0.95; sc[ro + 2] = 1.0; ss[N + i] = 4.6 * VIS.somaSize; }
+    else if (S.pace[i] > 0 && !dead[i]) { const k = lutK(tint[i] + 0.1), b = 0.35 + 1.4 * f; sc[ro] = L[k] * b; sc[ro + 1] = L[k + 1] * b; sc[ro + 2] = L[k + 2] * b; ss[N + i] = (3.4 + 0.8 * f) * VIS.somaSize; }
+    else ss[N + i] = 0;
+  }
+  w.soma.col.needsUpdate = w.soma.size.needsUpdate = true;
+
+  // synapses
+  if (VIS.synapses) {
+    const yc = w.syn.col.array, ys = w.syn.size.array, yh = w.syn.shape.array, sf = S.synFlash, lW = S.lW, post = S.post, sgn = S.sgn;
+    for (let s = 0, nS = S.nS; s < nS; s++) {
+      sf[s] *= sd;
+      const wt = S.weight(s), f = sf[s], l = lW[s], o = s * 3;
+      const cr = Math.min(1, Math.abs(l) / 0.28);
+      const tw = cr * (0.55 + 0.45 * Math.sin(realT * 2.7 + s * 1.37));
+      let k, b = 0.02 + 0.05 * wt + 1.6 * f + 0.6 * tw;
+      if (sgn[s] > 0) { k = lutK(tint[post[s]] + 0.33); yc[o] = L[k] * b; yc[o + 1] = L[k + 1] * b; yc[o + 2] = L[k + 2] * b; }
+      else { k = lutK(tint[post[s]] + 0.62); yc[o] = L[k] * b * 0.55; yc[o + 1] = L[k + 1] * b * 0.7; yc[o + 2] = (L[k + 2] * 0.6 + 0.5) * b; }
+      if (l < 0) { yc[o] *= 0.6; yc[o + 1] *= 0.75; yc[o + 2] = yc[o + 2] * 0.9 + 0.15 * cr; }
+      ys[s] = 0.2 + 0.2 * wt + 0.55 * f + 0.55 * cr;
+      yh[s] = cr;
+    }
+    w.syn.col.needsUpdate = w.syn.size.needsUpdate = w.syn.shape.needsUpdate = true;
+  }
+
+  // axons glow with presynaptic activity
+  if (VIS.axons) {
+    const ac = w.ax.col.array, pre = S.pre, post = S.post, SEG = w.SEG, sel = S.sel;
+    for (let s = 0, nS = S.nS; s < nS; s++) {
+      const j = pre[s], f = fl[j];
+      let r, g, b;
+      const k = lutK(tint[j] + (S.sgn[s] > 0 ? 0.04 : 0.55)), inten = 0.006 + 0.16 * f;
+      r = L[k] * inten; g = L[k + 1] * inten; b = L[k + 2] * inten;
+      if (sel >= 0) {
+        if (post[s] === sel) { r += 0.05; g += 0.16; b += 0.22; }
+        else if (j === sel) { r += 0.24; g += 0.15; b += 0.04; }
+        else { r *= 0.5; g *= 0.5; b *= 0.5; }
+      }
+      const base = s * SEG * 6;
+      for (let q = 0; q < SEG * 2; q++) { const o = base + q * 3; ac[o] = r; ac[o + 1] = g; ac[o + 2] = b; }
+    }
+    w.ax.col.needsUpdate = true;
+  }
+
+  // comets
+  const cp = w.comet.pos.array, cc = w.comet.col.array, cs = w.comet.size.array, ctrl = S.ctrl;
+  let q = 0;
+  while (q < w.pN) {
+    const s = w.pS[q], prog = (S.t - w.pT0[q]) / w.pDur[q];
+    if (prog >= 1) { const last = --w.pN; w.pS[q] = w.pS[last]; w.pT0[q] = w.pT0[last]; w.pDur[q] = w.pDur[last]; continue; }
+    const excS = S.sgn[s] > 0, k = lutK(tint[S.pre[s]] + (excS ? 0.02 : 0.55)), c9 = s * 9;
+    for (let tl = 0; tl < TAIL; tl++) {
+      let tt = prog - tl * 0.06; if (tt < 0) tt = 0;
+      const a0 = (1 - tt) * (1 - tt), a1 = 2 * (1 - tt) * tt, a2 = tt * tt, o = (q * TAIL + tl) * 3;
+      cp[o] = a0 * ctrl[c9] + a1 * ctrl[c9 + 3] + a2 * ctrl[c9 + 6];
+      cp[o + 1] = a0 * ctrl[c9 + 1] + a1 * ctrl[c9 + 4] + a2 * ctrl[c9 + 7];
+      cp[o + 2] = a0 * ctrl[c9 + 2] + a1 * ctrl[c9 + 5] + a2 * ctrl[c9 + 8];
+      const fall = 1 - tl / TAIL, b = (excS ? 1.25 : 1.0) * fall * (tt === 0 && tl ? 0 : 1);
+      if (excS) { cc[o] = (L[k] * 0.6 + 0.5) * b; cc[o + 1] = (L[k + 1] * 0.6 + 0.3) * b; cc[o + 2] = L[k + 2] * 0.5 * b; }
+      else { cc[o] = L[k] * 0.35 * b; cc[o + 1] = (L[k + 1] * 0.4 + 0.25) * b; cc[o + 2] = (L[k + 2] * 0.5 + 0.6) * b; }
+      cs[q * TAIL + tl] = (excS ? 0.62 : 0.55) * (0.45 + 0.55 * fall);
+    }
+    q++;
+  }
+  for (let r = w.pN * TAIL, rr = Math.min(MAXP * TAIL, w.lastPN * TAIL || 0); r < rr; r++) cs[r] = 0;
+  w.lastPN = w.pN;
+  w.comet.geo.setDrawRange(0, w.pN * TAIL);
+  w.comet.pos.needsUpdate = w.comet.col.needsUpdate = w.comet.size.needsUpdate = true;
+}
+
+/* ---------- tools ---------- */
+let tool = 'orbit';
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+const pointer = { down: false, inside: false };
+let brushNodes = [], brushSomas = [];
+const tmpV = new THREE.Vector3();
+
+function setTool(t) {
+  tool = t;
+  document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  if (t === 'orbit') {
+    controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+    controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+  } else {
+    controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+    controls.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE };
+  }
+  renderer.domElement.style.cursor = t === 'orbit' ? 'grab' : 'crosshair';
+  if (W) W.cursor.size.array[0] = 0;
+}
+function setRay(e) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+}
+function pickNeuron(maxPerp) {
+  const ray = raycaster.ray, sp = sim.somaPos; let best = -1, bestT = Infinity;
+  for (let i = 0; i < sim.N; i++) {
+    tmpV.set(sp[i * 3], sp[i * 3 + 1], sp[i * 3 + 2]);
+    if (ray.distanceSqToPoint(tmpV) > maxPerp * maxPerp) continue;
+    const t = tmpV.sub(ray.origin).dot(ray.direction);
+    if (t > 0 && t < bestT) { bestT = t; best = i; }
+  }
+  return best;
+}
+function clearBrush() {
+  for (const n of brushNodes) sim.ext[n] = 0;
+  for (const i of brushSomas) sim.stim[i] = 0;
+  brushNodes = []; brushSomas = [];
+}
+function applyBrush() {
+  clearBrush();
+  const i0 = pickNeuron(7);
+  const cur = W.cursor;
+  if (i0 < 0) { cur.size.array[0] = 0; cur.size.needsUpdate = true; return; }
+  const sp = sim.somaPos; tmpV.set(sp[i0 * 3], sp[i0 * 3 + 1], sp[i0 * 3 + 2]);
+  const t = tmpV.sub(raycaster.ray.origin).dot(raycaster.ray.direction);
+  const c = raycaster.ray.at(t, new THREE.Vector3());
+  const R = 6.5;
+  cur.pos.array.set([c.x, c.y, c.z]); cur.pos.needsUpdate = true;
+  cur.size.array[0] = R * 2.1 * (pointer.down ? 1 : 0.8); cur.size.needsUpdate = true;
+  const k = lutK(W.tint[i0] + 0.2), b = pointer.down ? 0.9 : 0.35;
+  cur.col.array.set([LUT[k] * b + 0.1, LUT[k + 1] * b + 0.1, LUT[k + 2] * b + 0.1]); cur.col.needsUpdate = true;
+  if (!pointer.down) return;
+  const np = sim.nodePos;
+  for (let n = 0; n < sim.nNodes; n++) {
+    if (sim.par[n] < 0) continue;
+    const dx = np[n * 3] - c.x, dy = np[n * 3 + 1] - c.y, dz = np[n * 3 + 2] - c.z, d2 = dx * dx + dy * dy + dz * dz;
+    if (d2 < R * R) { const f = 1 - Math.sqrt(d2) / R; sim.ext[n] = 7 * f; if (sim.glu[n] < 1.2 * f) sim.glu[n] = 1.2 * f; brushNodes.push(n); }
+  }
+  for (let i = 0; i < sim.N; i++) {
+    const dx = sp[i * 3] - c.x, dy = sp[i * 3 + 1] - c.y, dz = sp[i * 3 + 2] - c.z, d2 = dx * dx + dy * dy + dz * dz;
+    if (d2 < R * R) { sim.stim[i] = 5 * (1 - Math.sqrt(d2) / R); brushSomas.push(i); }
+  }
+}
+const cv = renderer.domElement;
+cv.addEventListener('pointerdown', e => {
+  if (tool === 'orbit' || e.button !== 0) return;
+  setRay(e);
+  if (tool === 'stim') { pointer.down = true; cv.setPointerCapture(e.pointerId); applyBrush(); return; }
+  const i = pickNeuron(3);
+  if (i < 0) return;
+  if (tool === 'pace') { if (sim.pace[i] > 0) sim.pace[i] = 0; else { sim.pace[i] = 1000 / VIS.paceHz; sim.nextPace[i] = sim.t; } flashStatus(sim.pace[i] ? `Pacemaker on at ${VIS.paceHz.toFixed(1)} Hz` : 'Pacemaker off'); }
+  else if (tool === 'inspect') selectNeuron(i === sim.sel ? -1 : i);
+  else if (tool === 'lesion') { sim.dead[i] = sim.dead[i] ? 0 : 1; if (sim.dead[i]) sim.pace[i] = 0; flashStatus(sim.dead[i] ? 'Neuron silenced' : 'Neuron revived'); }
+});
+cv.addEventListener('pointermove', e => { pointer.inside = true; if (tool === 'stim') { setRay(e); pointer.lastEvent = e; } });
+const endBrush = () => { pointer.down = false; if (sim) clearBrush(); };
+cv.addEventListener('pointerup', endBrush);
+cv.addEventListener('pointercancel', endBrush);
+cv.addEventListener('pointerleave', () => { pointer.inside = false; if (W) { W.cursor.size.array[0] = 0; W.cursor.size.needsUpdate = true; } });
+
+/* optogenetic sweep */
+let sweep = null;
+function startSweep() {
+  const dir = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+  sweep = { dir, t0: performance.now(), dur: 2200, ext: sim.extent + 10, nodes: [] };
+  sweepMesh.visible = true;
+  sweepMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+  const k = lutK(performance.now() / 9000 + 0.55); sweepMat.uniforms.uColor.value.setRGB(LUT[k] * 0.6 + 0.2, LUT[k + 1] * 0.6 + 0.3, LUT[k + 2] * 0.6 + 0.4);
+}
+function updateSweep(now) {
+  if (!sweep) return;
+  for (const n of sweep.nodes) sim.ext[n] = 0;
+  sweep.nodes = [];
+  const p = (now - sweep.t0) / sweep.dur;
+  if (p >= 1) { sweep = null; sweepMesh.visible = false; return; }
+  const off = -sweep.ext + 2 * sweep.ext * p, d = sweep.dir, np = sim.nodePos;
+  sweepMesh.position.copy(d).multiplyScalar(off);
+  sweepMat.uniforms.uAlpha.value = 0.1 * Math.sin(Math.PI * p);
+  for (let n = 0; n < sim.nNodes; n++) {
+    const x = np[n * 3] * d.x + np[n * 3 + 1] * d.y + np[n * 3 + 2] * d.z - off;
+    if (x > -2.2 && x < 2.2 && sim.par[n] >= 0) { sim.ext[n] = 5.5; sweep.nodes.push(n); }
+  }
+}
+
+/* ---------- sound: every spike plucks a note ---------- */
+const audio = { ctx: null, on: false, tokens: 4, master: null };
+function audioInit() {
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+  const ctx = new AC();
+  const master = ctx.createGain(); master.gain.value = 0.2;
+  const comp = ctx.createDynamicsCompressor();
+  const verb = ctx.createConvolver();
+  const len = Math.floor(ctx.sampleRate * 3), buf = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+  verb.buffer = buf;
+  const wet = ctx.createGain(); wet.gain.value = 0.55;
+  master.connect(comp); master.connect(verb); verb.connect(wet); wet.connect(comp); comp.connect(ctx.destination);
+  audio.ctx = ctx; audio.master = master; return true;
+}
+const SCALE = [0, 3, 5, 7, 10];
+function pluck(i) {
+  const ctx = audio.ctx, now = ctx.currentTime, deg = W.noteIdx[i];
+  const exc = sim.exc[i];
+  const st = SCALE[deg % 5] + 12 * Math.floor(deg / 5);
+  const f = (exc ? 174.6 : 87.3) * Math.pow(2, st / 12);
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = exc ? 'triangle' : 'sine'; o.frequency.value = f;
+  const peak = exc ? 0.13 : 0.2, tail = exc ? 1.1 : 0.4;
+  g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(peak, now + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, now + tail);
+  o.connect(g);
+  if (ctx.createStereoPanner) { const pn = ctx.createStereoPanner(); pn.pan.value = Math.max(-1, Math.min(1, sim.somaPos[i * 3] / (sim.extent || 1))); g.connect(pn); pn.connect(audio.master); }
+  else g.connect(audio.master);
+  o.start(now); o.stop(now + tail + 0.05);
+}
+
+/* ---------- HUD: raster and probe ---------- */
+const raster = $('raster'), rctx = raster.getContext('2d');
+const scope = $('scope'), sctx = scope.getContext('2d');
+let rasterShift = 0, rasterOrder = null;
+function sizeCanvas(cnv) { const r = cnv.getBoundingClientRect(), d = Math.min(devicePixelRatio, 2); cnv.width = Math.max(1, Math.round(r.width * d)); cnv.height = Math.max(1, Math.round(r.height * d)); }
+function rasterReset() {
+  sizeCanvas(raster); rctx.clearRect(0, 0, raster.width, raster.height);
+  const idx = [...Array(sim.N).keys()].sort((a, b) => sim.hBase[a] - sim.hBase[b]);
+  rasterOrder = new Int32Array(sim.N); idx.forEach((i, r) => { rasterOrder[i] = r; });
+}
+const RASTER_MS = 1600;
+function drawRaster(simDt) {
+  const Wd = raster.width, Hd = raster.height;
+  rasterShift += simDt * Wd / RASTER_MS;
+  const dx = Math.floor(rasterShift);
+  if (dx > 0) { rasterShift -= dx; rctx.globalCompositeOperation = 'copy'; rctx.drawImage(raster, -dx, 0); rctx.globalCompositeOperation = 'source-over'; }
+  const ps = Math.max(2, Math.round(Hd / 80));
+  for (let k = 0; k < frameSpikes.length; k += 2) {
+    const i = frameSpikes[k], t = frameSpikes[k + 1];
+    const x = Wd - 2 - (sim.t - t) * Wd / RASTER_MS, y = rasterOrder[i] / sim.N * (Hd - ps);
+    const c = lutK(W.tint[i]);
+    rctx.fillStyle = `rgb(${LUT[c] * 255 | 0},${LUT[c + 1] * 255 | 0},${LUT[c + 2] * 255 | 0})`;
+    rctx.fillRect(x, y, sim.exc[i] ? ps + 1 : ps, ps);
+  }
+}
+function drawScope() {
+  if (sim.sel < 0) return;
+  const Wd = scope.width, Hd = scope.height, tr = sim.trace, T = sim.TRACE, n = Math.min(T, sim.traceIdx);
+  sctx.clearRect(0, 0, Wd, Hd);
+  sctx.strokeStyle = 'rgba(196,178,255,.18)'; sctx.lineWidth = 1;
+  const yOf = v => Hd - 4 - (Math.max(-85, Math.min(35, v)) + 85) / 120 * (Hd - 8);
+  sctx.beginPath(); sctx.moveTo(0, yOf(-70)); sctx.lineTo(Wd, yOf(-70)); sctx.stroke();
+  const k = lutK(W.tint[sim.sel]);
+  sctx.strokeStyle = `rgb(${LUT[k] * 200 + 55 | 0},${LUT[k + 1] * 200 + 55 | 0},${LUT[k + 2] * 200 + 55 | 0})`; sctx.lineWidth = Math.max(1, devicePixelRatio);
+  sctx.beginPath();
+  for (let q = 0; q < n; q++) {
+    const v = tr[(sim.traceIdx - n + q) % T], x = (T - n + q) / (T - 1) * Wd;
+    q ? sctx.lineTo(x, yOf(v)) : sctx.moveTo(x, yOf(v));
+  }
+  sctx.stroke();
+}
+function selectNeuron(i) {
+  sim.sel = i; sim.traceIdx = 0;
+  $('inspect').hidden = i < 0;
+  if (i >= 0) {
+    sizeCanvas(scope);
+    $('insTitle').textContent = `#${i} · ${TYPE_LABEL[sim.typeName[i]]}`;
+    let ne = 0, ni = 0; const ic = sim.inC;
+    for (let k = ic.start[i]; k < ic.start[i + 1]; k++) (sim.sgn[ic.idx[k]] > 0 ? ne++ : ni++);
+    $('insIn').textContent = `${ne} E · ${ni} I`;
+  }
+}
+let lastStats = 0, lastSpikes = 0, lastDs = 0, lastStatT = 0;
+const popBins = [];
+function updateStats(now) {
+  if (now - lastStats < 400) return;
+  const dtS = (sim.t - lastStatT) / 1000;
+  if (dtS > 0) {
+    const r = (sim.spikes - lastSpikes) / dtS / sim.N, ds = (sim.dSpikes - lastDs) / dtS;
+    $('stRate').textContent = `${r.toFixed(1)} Hz`; $('stDs').textContent = `${ds < 100 ? ds.toFixed(0) : (ds / 1000).toFixed(1) + 'k'}/s`;
+  }
+  lastSpikes = sim.spikes; lastDs = sim.dSpikes; lastStatT = sim.t; lastStats = now;
+  // synchrony: coefficient of variation of the population count across frames
+  if (popBins.length > 8) {
+    const m = popBins.reduce((a, b) => a + b, 0) / popBins.length;
+    const vv = popBins.reduce((a, b) => a + (b - m) * (b - m), 0) / popBins.length;
+    $('stSync').textContent = m > 0 ? Math.min(9.99, Math.sqrt(vv) / m).toFixed(2) : '0.00';
+  }
+  popBins.length = 0;
+  let cons = 0, nE = 0;
+  for (let s = 0; s < sim.nS; s++) if (sim.sgn[s] > 0) { nE++; if (Math.abs(sim.lW[s]) > 0.08) cons++; }
+  $('stMem').textContent = `${(100 * cons / Math.max(1, nE)).toFixed(1)}% set`;
+  const sp = stepsPerFrame() * DT * 60 / 1000;
+  $('stSpeed').textContent = paused ? 'paused' : `×${sp < 0.1 ? sp.toFixed(3) : sp.toFixed(2)}`;
+  $('simClock').textContent = `${(sim.t / 1000).toFixed(2)} s`;
+  if (sim.sel >= 0) {
+    const i = sim.sel; $('insRate').textContent = `${sim.rate[i].toFixed(1)} Hz`; $('insBias').textContent = sim.bias[i].toFixed(1);
+    let sw = 0, c = 0; const ic = sim.inC;
+    for (let k = ic.start[i]; k < ic.start[i + 1]; k++) { const s = ic.idx[k]; if (sim.sgn[s] > 0) { sw += sim.weight(s); c++; } }
+    $('insW').textContent = c ? (sw / c).toFixed(2) : '–';
+  }
+}
+
+/* ---------- controls panel ---------- */
+const SLIDERS = {
+  speed:    { sec: 'secDyn', label: 'Speed', min: 0, max: 1, step: 0.01, get: () => VIS.speed, set: v => { VIS.speed = v; }, fmt: () => { const s = stepsPerFrame() * DT * 60 / 1000; return `×${s < 0.1 ? s.toFixed(3) : s.toFixed(2)} real time`; },
+    tip: 'How fast simulated time runs compared with real time. Slow it down to follow single spikes and dendritic flares. Speed it up to watch rhythms form and learning accumulate.' },
+  drive:    { sec: 'secDyn', label: 'Ambient input', min: 0, max: 3, step: 0.01, get: () => P.drive, set: v => { P.drive = v; }, fmt: v => v.toFixed(2),
+    tip: 'Random synaptic input from unseen neurons outside the specimen. It makes dendrites shimmer and lets neurons fire on their own. At 0 the network only does what you make it do.' },
+  inhib:    { sec: 'secDyn', label: 'Inhibition', min: 0, max: 2.5, step: 0.01, get: () => P.inhib, set: v => { P.inhib = v; }, fmt: v => v.toFixed(2),
+    tip: 'Strength of inhibitory synapses. Basket cells clamp down near the soma, where inhibition is most effective. Lower it for big synchronous waves, raise it for sparse, flickering firing.' },
+  coupling: { sec: 'secDyn', label: 'Dendritic coupling', min: 0.3, max: 2.5, step: 0.01, get: () => P.coupling, set: v => { P.coupling = v; }, fmt: v => `λ ≈ ${(Math.sqrt(v * 20) * 0.85).toFixed(1)} units`,
+    tip: 'How easily current flows along a dendrite. Higher values lengthen the length constant λ, so distant synapses reach the soma and a tree acts as one unit. Lower values isolate each branch, so far inputs fade on the way in.' },
+  nmdaTh:   { sec: 'secDyn', label: 'Dendritic spike threshold', min: 4, max: 30, step: 0.5, get: () => P.nmdaTh, set: v => { P.nmdaTh = v; }, fmt: v => `${v.toFixed(1)} mV`,
+    tip: 'How much local depolarisation a branch needs, with glutamate present, to fire an NMDA plateau spike. Lower it for frequent branch flares and bursting neurons. Raise it and dendrites go back to passively summing input.' },
+  psy:      { sec: 'secDyn', label: '5-HT2A tone', min: 0, max: 1, step: 0.01, get: () => P.psy, set: v => { P.psy = v; }, fmt: v => `${Math.round(v * 100)}%`,
+    tip: 'Mimics how psychedelics act on serotonin 2A receptors, which sit mostly on the distal apical dendrites of layer 5 pyramidal cells. Distal branches become far more excitable and the soma is nudged upward. It also intensifies trails, bloom and colour drift.' },
+  paceHz:   { sec: 'secDyn', label: 'New pacemaker rate', min: 0.5, max: 20, step: 0.1, get: () => VIS.paceHz, set: v => { VIS.paceHz = v; }, fmt: v => `${v.toFixed(1)} Hz`,
+    tip: 'Firing rate given to neurons you click with the Pace tool. Pacemakers you already placed keep their own rate.' },
+  lr:       { sec: 'secPlast', label: 'Learning rate (STDP)', min: 0, max: 5, step: 0.01, get: () => P.lr, set: v => { P.lr = v; }, fmt: v => `${v.toFixed(2)}×`,
+    tip: 'Speed of spike-timing-dependent plasticity. A synapse that fires just before its neuron spikes gets stronger, and one that fires just after gets weaker. Dendritic spikes also teach the synapses on their branch. At 0 the network stops learning.' },
+  consol:   { sec: 'secPlast', label: 'Consolidation', min: 0, max: 5, step: 0.01, get: () => P.consol, set: v => { P.consol = v; }, fmt: v => `${v.toFixed(2)}×`,
+    tip: 'How quickly early, fading synaptic changes turn into lasting memory, shown as crystal-star synapses. Sleep multiplies this by 10.' },
+  somaSize: { sec: 'secLook', label: 'Soma size', min: 0.3, max: 3, step: 0.01, get: () => VIS.somaSize, set: v => { VIS.somaSize = v; }, fmt: v => `${v.toFixed(2)}×`,
+    tip: 'Size of each cell body. Visual only.' },
+  denThick: { sec: 'secLook', label: 'Dendrite thickness', min: 0.3, max: 3, step: 0.01, get: () => VIS.denThick, set: v => { VIS.denThick = v; }, fmt: v => `${v.toFixed(2)}×`,
+    tip: 'Thickness of the glowing dendrite branches. Thick branches merge into luminous tubes, thin ones turn into fine filigree. Brightness is compensated so the scene doesn’t blow out. Visual only.' },
+  bloom:    { sec: 'secLook', label: 'Bloom', min: 0, max: 3, step: 0.01, get: () => VIS.bloom, set: v => { VIS.bloom = v; }, fmt: v => v.toFixed(2),
+    tip: 'Strength of the glow halo around bright light. Visual only.' },
+  trails:   { sec: 'secLook', label: 'Trails', min: 0, max: 0.97, step: 0.01, get: () => VIS.trails, set: v => { VIS.trails = v; }, fmt: v => v.toFixed(2),
+    tip: 'How long light lingers on screen after it fades, like an afterimage. High values paint long streaks behind spikes. Visual only.' },
+  phaseAmt: { sec: 'secLook', label: 'Rhythm colour', min: 0, max: 1, step: 0.01, get: () => VIS.phaseAmt, set: v => { VIS.phaseAmt = v; }, fmt: v => v.toFixed(2),
+    tip: 'How far a neuron’s hue shifts through each firing cycle. Neurons that fire in step end up the same colour, so at higher values synchrony shows up as patches of matching colour.' },
+  drift:    { sec: 'secLook', label: 'Hue drift', min: 0, max: 1, step: 0.01, get: () => VIS.drift, set: v => { VIS.drift = v; }, fmt: v => v.toFixed(2),
+    tip: 'Slow rotation of the whole palette over time. Visual only.' },
+};
+const PRESET_TIPS = {
+  bloom: 'A loose ball of 240 neurons, apical dendrites pointing outward like a dandelion. Wiring is local with a few long jumps.',
+  torus: 'A ring of tissue whose wiring leans one way around the loop, so activity tends to chase itself around as a travelling wave.',
+  phyllo: 'Neurons spaced over a sphere in the sunflower spiral. Waves spread across the surface and can curl into spirals.',
+  tree: 'Neurons placed along a 3D branching fractal, each driving its children. A pacemaker at the root sends cascades down the branches.',
+  mandala: 'Two mirrored layers of rings with identical cells and perfectly symmetric wiring. Set Ambient input to 0 to keep the symmetry, or raise it to watch the symmetry break.',
+};
+function stepsPerFrame() { return 0.25 * Math.pow(120, VIS.speed); }
+for (const [key, sp] of Object.entries(SLIDERS)) {
+  const row = document.createElement('div'); row.className = 'row';
+  row.dataset.tip = sp.tip; row.dataset.tipTitle = sp.label;
+  row.innerHTML = `<label for="sl-${key}">${sp.label}</label><output id="out-${key}"></output><input type="range" id="sl-${key}" min="${sp.min}" max="${sp.max}" step="${sp.step}">`;
+  const inp = row.querySelector('input');
+  inp.value = sp.get();
+  inp.addEventListener('input', () => { sp.set(parseFloat(inp.value)); $('out-' + key).textContent = sp.fmt(parseFloat(inp.value)); });
+  const sec = $(sp.sec);
+  if (sp.sec === 'secLook') sec.insertBefore(row, $('palettes')); else sec.appendChild(row);
+  $('out-' + key).textContent = sp.fmt(sp.get());
+}
+function syncSlider(key) { const sp = SLIDERS[key], el = $('sl-' + key); if (!el) return; el.value = sp.get(); $('out-' + key).textContent = sp.fmt(sp.get()); }
+{
+  const plastHint = document.createElement('p'); plastHint.className = 'hint';
+  plastHint.textContent = 'Synapses that fire just before their neuron grow. New growth is fluid and fades unless it consolidates into a crystal. Sleep speeds that up.';
+  $('secPlast').appendChild(plastHint);
+  const tg = document.createElement('div'); tg.className = 'toggles';
+  [['axons', 'Axons', 'Show the faint paths of axons running from each neuron to the synapses it makes.'],
+   ['comets', 'Axon spikes', 'Show action potentials travelling along axons as comets. Warm comets excite, cool ones inhibit.'],
+   ['synapses', 'Synapses', 'Show synapse beads on the dendrites. Size is strength, flicker is short-term plasticity, stars are consolidated memories.'],
+   ['autoRotate', 'Drift camera', 'Let the camera orbit slowly on its own.']].forEach(([k, label, tip]) => {
+    const b = document.createElement('button'); b.className = 'chip' + (VIS[k] ? ' on' : ''); b.textContent = label; b.setAttribute('aria-pressed', VIS[k]); b.dataset.tip = tip;
+    b.addEventListener('click', () => { VIS[k] = !VIS[k]; b.classList.toggle('on', VIS[k]); b.setAttribute('aria-pressed', VIS[k]); controls.autoRotate = VIS.autoRotate; applyVisibility(); });
+    tg.appendChild(b);
+  });
+  $('secLook').appendChild(tg);
+}
+const presetKeys = Object.keys(PRESETS);
+presetKeys.forEach((k, idx) => {
+  const b = document.createElement('button'); b.className = 'chip'; b.dataset.key = k; b.textContent = PRESETS[k].label;
+  b.dataset.tip = `${PRESET_TIPS[k]} Key ${idx + 1}.`;
+  b.addEventListener('click', () => { presetKey = k; buildWorld(); flashStatus(PRESETS[k].label); });
+  $('presets').appendChild(b);
+});
+Object.keys(PALETTES).forEach(k => {
+  const b = document.createElement('button'); b.className = 'chip' + (k === VIS.palette ? ' on' : ''); b.textContent = k;
+  b.addEventListener('click', () => { setPalette(k); document.querySelectorAll('#palettes .chip').forEach(c => c.classList.toggle('on', c === b)); });
+  $('palettes').appendChild(b);
+});
+$('reseed').addEventListener('click', () => { seed = (seed * 9301 + 49297) % 233280 + 1; buildWorld(); flashStatus('Regrown'); });
+$('clearMem').addEventListener('click', () => { sim.clearMemories(); flashStatus('Memories cleared'); });
+
+let paused = false;
+function togglePause() {
+  paused = !paused;
+  $('bPause').classList.toggle('on', paused);
+  $('pauseLabel').textContent = paused ? 'Play' : 'Pause';
+  $('pauseIcon').innerHTML = paused ? '<path d="M7 5v14l12-7z"/>' : '<path d="M8 5v14M16 5v14"/>';
+}
+function toggleSleep() { P.sleep = !P.sleep; $('bSleep').classList.toggle('on', P.sleep); flashStatus(P.sleep ? 'Sleeping: slow waves, fast consolidation' : 'Awake'); }
+function toggleSound() {
+  if (!audio.ctx && !audioInit()) { flashStatus('Sound is not available here'); return; }
+  audio.on = !audio.on; if (audio.on && audio.ctx.state === 'suspended') audio.ctx.resume();
+  $('bSound').classList.toggle('on', audio.on);
+}
+function togglePanel(force) {
+  const p = $('panel'); p.hidden = force !== undefined ? !force : !p.hidden;
+  $('bPanel').classList.toggle('on', !p.hidden);
+}
+document.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+$('bSweep').addEventListener('click', () => startSweep());
+$('bSleep').addEventListener('click', toggleSleep);
+$('bSound').addEventListener('click', toggleSound);
+$('bPause').addEventListener('click', togglePause);
+$('bPanel').addEventListener('click', () => togglePanel());
+addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input')) return;
+  const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); togglePause(); }
+  else if (k >= '1' && k <= String(presetKeys.length)) { presetKey = presetKeys[+k - 1]; buildWorld(); flashStatus(PRESETS[presetKey].label); }
+  else if (k === 'o') setTool('orbit'); else if (k === 's') setTool('stim'); else if (k === 'p') setTool('pace');
+  else if (k === 'i') setTool('inspect'); else if (k === 'l') setTool('lesion');
+  else if (k === 'w') startSweep(); else if (k === 'z') toggleSleep(); else if (k === 'm') toggleSound();
+  else if (k === 'h') document.body.classList.toggle('ui-hidden');
+});
+/* tooltips: any element with data-tip */
+const tipEl = $('tip');
+let tipFor = null;
+function showTip(el) {
+  tipFor = el;
+  const title = el.dataset.tipTitle;
+  tipEl.innerHTML = (title ? `<b></b>` : '') + '<span></span>';
+  if (title) tipEl.querySelector('b').textContent = title;
+  tipEl.querySelector('span').textContent = el.dataset.tip;
+  const r = el.getBoundingClientRect(), tw = tipEl.offsetWidth, th = tipEl.offsetHeight, m = 10;
+  let x, y;
+  if (el.closest('#dock')) { x = r.left + r.width / 2 - tw / 2; y = r.top - th - m; }
+  else if (el.closest('#panel') && innerWidth > 760) { const pr = $('panel').getBoundingClientRect(); x = pr.right + m; y = r.top + r.height / 2 - th / 2; }
+  else { x = r.left; y = r.bottom + m; }
+  x = Math.max(16, Math.min(innerWidth - tw - 16, x)); y = Math.max(16, Math.min(innerHeight - th - 16, y));
+  tipEl.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
+  tipEl.classList.add('show');
+}
+function hideTip() { tipFor = null; tipEl.classList.remove('show'); }
+document.addEventListener('pointerover', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el && el !== tipFor) showTip(el); else if (!el && tipFor) hideTip(); });
+document.addEventListener('focusin', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el) showTip(el); });
+document.addEventListener('focusout', hideTip);
+document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' && !(e.target.closest && e.target.closest('[data-tip]'))) hideTip(); });
+
+let statusTimer = 0;
+function flashStatus(msg) { const s = $('status'); s.textContent = msg; s.style.opacity = 1; clearTimeout(statusTimer); statusTimer = setTimeout(() => { s.style.opacity = 0; }, 1600); }
+
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); bloomPass.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); updatePointScale();
+  rasterReset(); if (sim.sel >= 0) sizeCanvas(scope);
+});
+
+/* ---------- main loop ---------- */
+if (innerWidth < 760) togglePanel(false);
+setTool('orbit');
+buildWorld();
+// warm up so the first frame is already alive
+for (let k = 0; k < 900; k++) sim.step();
+frameSpikes.length = 0; W.pN = 0;
+flashStatus('Pick a tool below and touch the network');
+
+let last = performance.now(), acc = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dtReal = Math.min(0.06, (now - last) / 1000); last = now;
+  let simDt = 0;
+  frameSpikes.length = 0;
+  if (tool === 'stim' && pointer.inside && pointer.lastEvent) { setRay(pointer.lastEvent); applyBrush(); }
+  updateSweep(now);
+  if (!paused) {
+    acc += stepsPerFrame() * dtReal * 60;
+    let n = Math.min(80, Math.floor(acc)); acc -= n; if (acc > 4) acc = 0;
+    for (; n > 0; n--) { sim.step(); simDt += DT; }
+  }
+  popBins.push(frameSpikes.length / 2 / Math.max(DT, simDt));
+  if (audio.on) {
+    audio.tokens = Math.min(6, audio.tokens + dtReal * 14);
+    for (let k = 0; k < frameSpikes.length && audio.tokens >= 1; k += 2) { if (Math.random() < 0.6) { pluck(frameSpikes[k]); audio.tokens -= 1; } }
+  }
+  afterPass.uniforms.damp.value = Math.min(0.97, VIS.trails + P.psy * 0.08);
+  bloomPass.strength = VIS.bloom * (1 + P.psy * 0.45);
+  updateVisuals(simDt, now / 1000);
+  drawRaster(simDt); drawScope(); updateStats(now);
+  controls.update();
+  composer.render();
+}
+requestAnimationFrame(frame);
+</script>

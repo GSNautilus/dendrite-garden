@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tadpole Wiring Schematic</title>
+<!-- The Tadpole's signal flow, head (left) to tail (right), for the user's guide. Wiring follows PRESETS.tadpole in
+     cortex.html. Render: node tools/cdp.mjs "file:///.../docs/guide/schematic.html" 1 out.png with VW=3440 VH=1440. -->
+<style>
+  :root { --bg: #07070d; --ink: #f2f2f8; --dim: #b4b4c8; --faint: #6c6c84; --exc: #ffa360; --inh: #5fb8ff; --learn: #ffc94d; }
+  html, body { margin: 0; background: var(--bg); }
+  svg { display: block; width: 100vw; height: 100vh; font-family: "Segoe UI", system-ui, sans-serif; }
+  .name { font-weight: 600; font-size: 29px; fill: var(--ink); }
+  .desc { font-size: 18px; fill: var(--dim); }
+  .meta { font-size: 14px; fill: var(--faint); letter-spacing: .02em; }
+  .tag { font-size: 13px; font-weight: 700; letter-spacing: .12em; }
+  .lane { font-size: 15px; font-weight: 700; letter-spacing: .2em; fill: #4a4a60; }
+  .note h { font-weight: 600; }
+</style>
+</head>
+<body>
+<svg id="s" viewBox="0 0 3440 1440" xmlns="http://www.w3.org/2000/svg"></svg>
+<script>
+const NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('s');
+const el = (tag, at = {}, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); parent.appendChild(e); return e; };
+// a fill given here goes in style, so that it wins over the class's fill
+const text = (x, y, str, cls, at = {}, parent = svg) => { const { fill, ...rest } = at; const t = el('text', { x, y, class: cls, ...rest, ...(fill ? { style: 'fill:' + fill } : {}) }, parent); t.textContent = str; return t; };
+const TAG = { SENSE: '#ffd166', SWIM: '#ff8f6b', FEED: '#9be564', CHOICE: '#c9a3ff', TAIL: '#ff7ad9', MOD: '#7fd8ff' };
+const TAG_NAME = { SENSE: 'senses', SWIM: 'swim path', FEED: 'feed path', CHOICE: 'competition', TAIL: 'tail rhythm', MOD: 'modulator' };
+const CHEM = { DA: ['#ffc94d', 'dopamine'], NA: ['#9fe7ff', 'noradrenaline'], ACh: ['#7dff9a', 'acetylcholine'], '5HT': ['#c58bff', 'serotonin'] };
+
+// boxes: key → [x centre, y centre, tag, name, description lines, meta, number key, chemicals it answers]
+const W0 = 300, H0 = 124;
+const N = {
+  touch:   [230, 300, 'SENSE', 'Touch', ['touch relays'], '1,000 cells', 1],
+  eye:     [230, 560, 'SENSE', 'Light (eye)', ['photoreceptors'], '500 cells', 2],
+  food:    [230, 860, 'SENSE', 'Food', ['food relays'], '1,200 cells', 3],
+  tgate:   [640, 400, 'SENSE', 'Touch gate', ['a touch mutes light'], '800 inhibitory cells'],
+  light:   [640, 610, 'SENSE', 'Light relay', ['silent until lit'], '1,200 cells'],
+  swim:    [1110, 300, 'SWIM', 'Swim choice', ['latches on when pushed'], '4,000 cells', 0, ['NA', '5HT']],
+  feed:    [1110, 860, 'FEED', 'Feed choice', ['latches on when pushed'], '4,000 cells', 0, ['NA', '5HT', 'DA']],
+  cS:      [970, 580, 'CHOICE', 'Competition S', ['swim silences feed'], '900 inhibitory', 0, null, 250],
+  cF:      [1250, 580, 'CHOICE', 'Competition F', ['feed silences swim'], '900 inhibitory', 0, null, 250],
+  gate:    [1530, 300, 'SWIM', 'Swim gate', ['turns the brake off'], '700 inhibitory cells'],
+  brake:   [1900, 300, 'SWIM', 'Swim brake', ['always on'], '800 inhibitory cells'],
+  command: [2270, 300, 'SWIM', 'Command', ['drives the tail'], '1,000 cells'],
+  fgate:   [1530, 860, 'FEED', 'Feed gate', ['turns the brake off'], '700 inhibitory cells'],
+  fbrake:  [1900, 860, 'FEED', 'Feed brake', ['always on'], '800 inhibitory cells'],
+  pump:    [2270, 860, 'FEED', 'Feed pump', ['pulses when released'], '2,500 cells'],
+  rhythmL: [2660, 200, 'TAIL', 'Rhythm L', ['left half-centre'], '3,750 cells', 0, ['NA', 'ACh']],
+  rhythmR: [2660, 470, 'TAIL', 'Rhythm R', ['right half-centre'], '3,750 cells', 0, ['NA', 'ACh']],
+};
+const MODS = {
+  alarm:  [330,  1190, 'Alarm (LC)', 'NA', 'woken by Touch', '→ both choices, tail: louder'],
+  bf:     [770,  1190, 'Basal forebrain', 'ACh', 'woken by Light', '→ tail: faster strokes'],
+  vta:    [1210, 1190, 'VTA', 'DA', 'woken by Food', '→ Feed choice: lets Light learn'],
+  sraphe: [1900, 1190, 'Raphe (feeding)', '5HT', 'woken by feeding (pump)', '→ Feed choice: fullness, ~8 s'],
+  raphe:  [2400, 1190, 'Raphe', '5HT', 'woken by swimming (tail)', '→ Swim choice: a long swim gives up'],
+};
+const box = {};
+
+// defs: arrowheads and the inhibitory bar
+const defs = el('defs');
+const mk = (id, col, path, w = 14, h = 14, refX = 12) => { const m = el('marker', { id, viewBox: '0 0 14 14', refX, refY: 7, markerWidth: w, markerHeight: h, orient: 'auto-start-reverse', markerUnits: 'userSpaceOnUse' }, defs); el('path', { d: path, fill: col, stroke: col }, m); };
+mk('ex', '#ffa360', 'M0,1 L13,7 L0,13 z', 18, 18, 12);
+mk('ln', '#ffc94d', 'M0,1 L13,7 L0,13 z', 18, 18, 12);
+mk('in', '#5fb8ff', 'M5,0 L9,0 L9,14 L5,14 z', 20, 20, 8);
+mk('wk', '#6c6c84', 'M0,2 L12,7 L0,12 z', 14, 14, 11);
+
+// lanes
+text(40, 300 - 92, 'SWIM', 'lane'); text(40, 860 - 92, 'FEED', 'lane'); text(40, 1190 - 92, 'MOOD', 'lane');
+el('line', { x1: 40, x2: 2860, y1: 1060, y2: 1060, stroke: '#1d1d2c', 'stroke-width': 2 });
+
+// edge geometry: from the border of one box towards another, optional bend (px, perpendicular), and offset along the normal
+const rectHit = (b, dx, dy) => { const sx = (b.w / 2) / Math.abs(dx || 1e-9), sy = (b.h / 2) / Math.abs(dy || 1e-9), s = Math.min(sx, sy); return [b.x + dx * s, b.y + dy * s]; };
+function edge(a, b, kind, o = {}) {
+  const A = box[a], B = box[b], off = o.off || 0;
+  let dx = B.x - A.x, dy = B.y - A.y; const L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L;
+  const pa = rectHit(A, dx, dy), pb = rectHit(B, -dx, -dy);
+  const g = kind === 'in' ? 14 : 16;   // stop a little short of the box
+  const p0 = [pa[0] + dx / L * 6 + nx * off, pa[1] + dy / L * 6 + ny * off], p1 = [pb[0] - dx / L * g + nx * off, pb[1] - dy / L * g + ny * off];
+  const bend = o.bend || 0, c = [(p0[0] + p1[0]) / 2 + nx * bend, (p0[1] + p1[1]) / 2 + ny * bend];
+  const col = { ex: '#ffa360', in: '#5fb8ff', ln: '#ffc94d' }[kind];
+  const p = el('path', { d: `M${p0[0]},${p0[1]} Q${c[0]},${c[1]} ${p1[0]},${p1[1]}`, fill: 'none', stroke: col, 'stroke-width': kind === 'ln' ? 3 : 4, 'marker-end': `url(#${kind})`, 'stroke-linecap': 'round', ...(kind === 'ln' ? { 'stroke-dasharray': '10 9' } : {}) });
+  if (o.label) { const m = [(p0[0] + 2 * c[0] + p1[0]) / 4, (p0[1] + 2 * c[1] + p1[1]) / 4]; text(m[0] + (o.lx || 0), m[1] + (o.ly || 0), o.label, 'desc', { fill: col, 'text-anchor': o.anchor || 'middle', 'font-size': 17 }); }
+  return p;
+}
+function loop(k, label, side = 'top') {   // recurrent excitation: a small loop on the box
+  const b = box[k], x = b.x + b.w / 2 - 54, y = side === 'top' ? b.y - b.h / 2 : b.y + b.h / 2, s = side === 'top' ? -1 : 1;
+  el('path', { d: `M${x - 26},${y + s * 4} C${x - 34},${y + s * 56} ${x + 34},${y + s * 56} ${x + 26},${y + s * 12}`, fill: 'none', stroke: '#ffa360', 'stroke-width': 3.5, 'marker-end': 'url(#ex)' });
+  text(x + 44, y + s * 34 + 6, label, 'desc', { fill: '#ffa360', 'font-size': 16 });
+}
+function drawBox(k, [x, y, tag, name, desc, meta, key, chems, w = W0]) {
+  const h = H0, g = el('g'), c = TAG[tag];
+  box[k] = { x, y, w, h };
+  el('rect', { x: x - w / 2, y: y - h / 2, width: w, height: h, rx: 14, fill: '#10101b', stroke: c, 'stroke-opacity': .55, 'stroke-width': 2 }, g);
+  el('rect', { x: x - w / 2, y: y - h / 2 + 12, width: 5, height: h - 24, fill: c }, g);
+  text(x - w / 2 + 22, y - h / 2 + 24, TAG_NAME[tag].toUpperCase(), 'tag', { fill: c }, g);
+  text(x - w / 2 + 22, y - h / 2 + 60, name, 'name', {}, g);
+  desc.forEach((d, i) => text(x - w / 2 + 22, y - h / 2 + 86 + i * 22, d, 'desc', {}, g));
+  text(x - w / 2 + 22, y + h / 2 - 12, meta, 'meta', {}, g);
+  if (key) { el('rect', { x: x + w / 2 - 50, y: y - h / 2 + 12, width: 34, height: 34, rx: 6, fill: 'none', stroke: '#fff', 'stroke-width': 2 }, g); text(x + w / 2 - 33, y - h / 2 + 37, key, 'name', { 'font-size': 22, 'text-anchor': 'middle' }, g); }
+  (chems || []).forEach((ch, i) => { const cx = x + w / 2 - 22 - i * 26, cy = y + h / 2 - 20; el('circle', { cx, cy, r: 9, fill: CHEM[ch][0] }, g); });
+}
+
+// edges first (under the boxes), boxes over them
+for (const [k, v] of Object.entries(N)) box[k] = { x: v[0], y: v[1], w: v[8] || W0, h: H0 };
+for (const [k, v] of Object.entries(MODS)) box[k] = { x: v[0], y: v[1], w: 380, h: 150 };
+edge('touch', 'swim', 'ex');
+edge('touch', 'tgate', 'ex');
+edge('eye', 'light', 'ex');
+edge('food', 'feed', 'ex');
+edge('tgate', 'light', 'in');
+edge('light', 'swim', 'ln', { bend: -40, label: 'weak, learns', lx: 92, ly: 10 });
+edge('light', 'feed', 'ln', { bend: 40, label: 'weak, learns', lx: -82, ly: 0 });
+edge('swim', 'cS', 'ex', { off: 0 });
+edge('cS', 'feed', 'in');
+edge('feed', 'cF', 'ex');
+edge('cF', 'swim', 'in');
+edge('swim', 'gate', 'ex');
+edge('gate', 'brake', 'in');
+edge('brake', 'command', 'in');
+edge('feed', 'fgate', 'ex');
+edge('fgate', 'fbrake', 'in');
+edge('fbrake', 'pump', 'in');
+edge('command', 'rhythmL', 'ex');
+edge('command', 'rhythmR', 'ex');
+edge('rhythmL', 'rhythmR', 'in', { off: -40 });
+edge('rhythmR', 'rhythmL', 'in', { off: -40 });
+for (const [k, v] of Object.entries(N)) drawBox(k, v);
+loop('swim', 'excite each other ×6');
+loop('feed', 'excite each other ×6', 'bottom');
+loop('pump', 'ignites, tires, recovers', 'bottom');
+text(2600, 335 + 6, 'take turns', 'desc', { fill: '#5fb8ff', 'font-size': 17, 'text-anchor': 'end' });
+
+// modulators
+for (const [k, [x, y, name, ch, from, to]] of Object.entries(MODS)) {
+  const w = 380, h = 150, c = CHEM[ch][0], g = el('g');
+  el('rect', { x: x - w / 2, y: y - h / 2, width: w, height: h, rx: 14, fill: '#10101b', stroke: c, 'stroke-opacity': .6, 'stroke-width': 2, 'stroke-dasharray': '3 6' }, g);
+  text(x - w / 2 + 22, y - h / 2 + 24, 'MODULATOR', 'tag', { fill: TAG.MOD }, g);
+  text(x - w / 2 + 22, y - h / 2 + 60, name, 'name', {}, g);
+  el('circle', { cx: x - w / 2 + 30, cy: y - h / 2 + 86, r: 9, fill: c }, g);
+  text(x - w / 2 + 46, y - h / 2 + 92, CHEM[ch][1], 'desc', { fill: c, 'font-weight': 600 }, g);
+  text(x - w / 2 + 22, y - h / 2 + 116, from, 'desc', {}, g);
+  text(x - w / 2 + 22, y - h / 2 + 138, to, 'desc', { fill: '#d6d6e6' }, g);
+}
+
+// how it works: numbered notes on the right, with matching markers on the diagram
+const NOTES = [
+  ['Release the brake', 'The brakes fire all the time and hold the Command and the pump silent. A choice excites its gate, the gate inhibits the brake, and the output is set free: two inhibitions make a go.', [1715, 220]],
+  ['Only one choice wins', 'Each choice drives its own competition group, which inhibits the other choice. Whichever lobe gets ahead silences its rival.', [1110, 470]],
+  ['The tail keeps time', 'Each half of the tail bursts until its synapses tire, inhibiting the other half meanwhile. Then the other half takes over. The alternation is the swim stroke.', [2770, 335]],
+  ['Light learns to mean food', 'Light reaches both choices only weakly. Food wakes the VTA, and its dopamine strengthens whatever Light → Feed synapses were just active. Pair Light with Food about five times and Light alone starts feeding.', [690, 735]],
+  ['Moods', 'Noradrenaline makes strokes louder, acetylcholine faster. Serotonin builds slowly and tires a choice out: a long swim gives up, and a meal ends in fullness.', [1270, 1080]],
+];
+const NX = 2920, NW = 480;
+let ny = 150;
+NOTES.forEach(([title, body, at], i) => {
+  const g = el('g'), words = body.split(' '), lines = []; let line = '';
+  const probe = text(0, -100, '', 'desc');
+  for (const w of words) { probe.textContent = line ? line + ' ' + w : w; if (probe.getComputedTextLength() > NW - 40 && line) { lines.push(line); line = w; } else line = probe.textContent; }
+  lines.push(line); probe.remove();
+  const h = 62 + lines.length * 25 + 14;
+  el('rect', { x: NX, y: ny, width: NW, height: h, rx: 14, fill: '#0d0d17', stroke: '#2a2a3c', 'stroke-width': 1.5 }, g);
+  el('circle', { cx: NX + 32, cy: ny + 36, r: 17, fill: '#f2f2f8' }, g);
+  text(NX + 32, ny + 43, String(i + 1), 'name', { 'font-size': 20, fill: '#07070d', 'text-anchor': 'middle' }, g);
+  text(NX + 62, ny + 44, title, 'name', { 'font-size': 24 }, g);
+  lines.forEach((l, j) => text(NX + 22, ny + 80 + j * 25, l, 'desc', { 'font-size': 18 }, g));
+  ny += h + 18;
+  el('circle', { cx: at[0], cy: at[1], r: 17, fill: '#f2f2f8' });
+  text(at[0], at[1] + 7, String(i + 1), 'name', { 'font-size': 20, fill: '#07070d', 'text-anchor': 'middle' });
+});
+
+// key
+const KY = 1360; let kx = 2920;
+const keyItem = (draw, label) => { draw(kx); text(kx + 64, KY + 6, label, 'desc'); kx += 64 + label.length * 9.2 + 30; };
+text(2920, KY - 30, 'KEY', 'tag', { fill: '#8a8aa0' });
+keyItem(x => el('line', { x1: x, y1: KY, x2: x + 46, y2: KY, stroke: '#ffa360', 'stroke-width': 4, 'marker-end': 'url(#ex)' }), 'excites');
+keyItem(x => el('line', { x1: x, y1: KY, x2: x + 46, y2: KY, stroke: '#5fb8ff', 'stroke-width': 4, 'marker-end': 'url(#in)' }), 'inhibits');
+kx = 2920;
+const KY2 = KY + 40;
+el('line', { x1: kx, y1: KY2, x2: kx + 46, y2: KY2, stroke: '#ffc94d', 'stroke-width': 3, 'stroke-dasharray': '10 9', 'marker-end': 'url(#ln)' }); text(kx + 64, KY2 + 6, 'weak, learns', 'desc');
+kx += 200; ['DA', 'NA', 'ACh', '5HT'].forEach(ch => { el('circle', { cx: kx + 8, cy: KY2, r: 9, fill: CHEM[ch][0] }); text(kx + 22, KY2 + 6, ch === '5HT' ? '5-HT' : ch, 'desc'); kx += 70; });
+
+// title
+text(40, 70, 'The Tadpole · how it is wired', 'name', { 'font-size': 40 });
+text(40, 108, 'Head on the left, tail on the right. Hold 1 to touch it (it swims), 3 to feed it, 2 to show it light. Coloured dots on a box: the chemicals its cells answer.', 'desc', { 'font-size': 20 });
+</script>
+</body>
+</html>
