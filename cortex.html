@@ -73,8 +73,9 @@ details.grp>summary:focus-visible{outline:2px solid var(--accent-2);outline-offs
 #dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:5;border-radius:18px;padding:5px;display:flex;gap:2px;align-items:stretch;max-width:calc(100% - 32px);overflow-x:auto;scrollbar-width:none}
 #dock::-webkit-scrollbar{display:none}
 .tool{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;border-radius:13px;padding:7px 10px 6px;min-width:58px;cursor:pointer;color:var(--muted);transition:color .2s,background .2s}
-#brushPop{position:fixed;z-index:7;width:250px;border-radius:14px;padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+#brushPop{position:fixed;z-index:7;width:290px;border-radius:14px;padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
 #brushPop[hidden]{display:none}
+#brushPop .chip{padding:4px 9px;font-size:12px}#brushPop .pdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}
 #brushPop h4{margin:0;font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
 #brushRing{position:fixed;z-index:3;pointer-events:none;border-radius:50%;border:1px solid rgba(255,214,170,.55);box-shadow:0 0 12px rgba(255,190,120,.25),inset 0 0 12px rgba(255,190,120,.12);transform:translate(-50%,-50%);display:none}
 .tool .more{position:absolute;right:5px;top:5px;width:0;height:0;border-left:4px solid transparent;border-bottom:4px solid currentColor;opacity:.55}
@@ -306,7 +307,7 @@ body.ui-hidden #groups{display:none!important}
   <footer><button class="btn" id="applyCells" data-tip="Grow a new network with these cell types, shapes, wiring and layout.">Regrow with these settings</button><span class="hint" id="dirtyNote">Settings marked <span class="rg">↻</span> apply when you regrow. Everything else changes at once.</span></footer>
 </aside>
 
-<div id="brushPop" class="glass" role="dialog" aria-label="Excite brush" hidden><h4>Excite brush</h4><div id="brushSliders" class="typeEdit"></div></div>
+<div id="brushPop" class="glass" role="dialog" aria-label="Brush" hidden><h4>Brush paints</h4><div id="paintChips" class="chips"></div><div id="brushSliders" class="typeEdit"></div></div>
 <div id="brushRing"></div>
 <div id="winPop" class="glass" role="dialog" aria-label="Windows" hidden></div>
 <nav id="dock" class="glass" aria-label="Tools">
@@ -382,16 +383,19 @@ const C = 32, AXN = 64, DT = 0.5, SIM_SLOTS = 32, SLOT = 256, AX_MAX = 0.06, MAX
 const RS = 384, RS_HDR = 32, RS_MAIN = 192;
 const CAND_P = 64, PAIR_MAX = 3, CONTACT_R = 1.7, RW_EVERY = 100, BUD_TICKS = 30, WITHER_TICKS = 24, AXSUB = 4, AXSUB_T = 6, AXSUB_L = 64;   // contact wiring and rewiring
 // inbox i32s per cell: [0, 64N) the two input channels of every compartment; [64N, 96N) inhibitory trace per compartment and
-// [96N, 98N) per-cell excitation/inhibition sums (Inhibition view); [98N, 162N) lasting/fluid per compartment and [162N, 164N) per cell (Memory view)
-const OBS_I32 = 164;
+// [96N, 98N) per-cell excitation/inhibition sums (Inhibition view); [98N, 162N) lasting/fluid per compartment and [162N, 164N) per cell (Memory view);
+// [164N, 168N) a copy, for drawing, of the painted chemical cloud (G.cloud, copied each frame while it is alive): per cell its
+// four levels ÷ CLOUD_MAX as two unorm16 pairs, the time they were last written (f32 bits), one spare.
+const OBS_I32 = 168, OBS_CLOUD = 164, CLOUD_MAX = 4, CLOUD_DOSE = 3e-4;   // dose: level per ms per unit of brush strength at the ball's centre
 // circuit groups have ids 1 to GMAX - 1 (0 = no group). Misc: per-type and total counters (types 0–15, then total spikes,
 // dendritic spikes, sprouts, withers at 16–19), scope trace, spikes per circuit group. TypeU: types, groups, strength classes
 // (4 banks of 8), eligibility parameters, eligibility masks (u32, per presynaptic group)
 const GMAX = 32;
 const MISC_U32 = 32 + 1024 + GMAX, TYPEU_F32 = (MAX_TYPES * 4 + GMAX + 8 + 2 + 8) * 4, TYPEU_G = MAX_TYPES * 16, TYPEU_W = TYPEU_G + GMAX * 4, TYPEU_E = TYPEU_W + 32, TYPEU_GM = TYPEU_E + 8;
 // Misc continues (circuits with modulators): spikes per group since the last level tick, then the effect table, 2 vec4s per
-// (group, type). MISC_U32 stays the prefix the HUD reads back.
-const MISC_ALL_U32 = MISC_U32 + GMAX + GMAX * MAX_TYPES * 2 * 4;
+// (group, type), then each group's four levels (copied there by the level kernel, for a painted cloud to add to). MISC_U32
+// stays the prefix the HUD reads back.
+const MISC_ALL_U32 = MISC_U32 + GMAX + GMAX * MAX_TYPES * 2 * 4 + GMAX * 4;
 const CONS_EVERY = 50;
 // dopamine-gated eligibility trace (Phase 3, docs/phase3-plan.md §4): trace time constant (ms), STDP amplitudes into the trace,
 // conversion rate (per ms per unit of dopamine signal above theta), theta (in units of the learning multiplier − 1), cap on W.x + W.z
@@ -452,7 +456,7 @@ const MOD_K = { drive: 2.5, burst: 8, louder: 0.8, learn: 2 };
 const MOD_EVERY = 4, MOD_REC = 4096;   // the level kernel runs every 4 steps (2 ms); the debug recorder keeps 4096 ticks (8.2 s)
 const MODU_HOLD = 72, MODU_RC = MODU_HOLD + GMAX * 4, MODU_CAPG = MODU_RC + MAX_TYPES * 32, MODU_F32 = MODU_CAPG + MAX_TYPES * 40;   // ModU: dec 4, k 4, projections 64, holds, receptors, cap grid
 // render uniform: 88 floats, the type colours, then the modulator display block (levels, rates, sources, receptors, colours, haze)
-const RU_TCOL = 88, RU_MLEV = RU_TCOL + MAX_TYPES * 4, RU_GRATE = RU_MLEV + GMAX * 4, RU_GSRC = RU_GRATE + GMAX, RU_RMASK = RU_GSRC + GMAX, RU_CHEMC = RU_RMASK + MAX_TYPES * 4, RU_HZ = RU_CHEMC + 16, RU_VX = RU_HZ + 4, RU_VX2 = RU_VX + 4, RU_VX3 = RU_VX2 + 4, RU_F32 = RU_VX3 + 4;
+const RU_TCOL = 88, RU_MLEV = RU_TCOL + MAX_TYPES * 4, RU_GRATE = RU_MLEV + GMAX * 4, RU_GSRC = RU_GRATE + GMAX, RU_RMASK = RU_GSRC + GMAX, RU_CHEMC = RU_RMASK + MAX_TYPES * 4, RU_HZ = RU_CHEMC + 16, RU_VX = RU_HZ + 4, RU_VX2 = RU_VX + 4, RU_VX3 = RU_VX2 + 4, RU_BRC = RU_VX3 + 4, RU_F32 = RU_BRC + 4;
 const CAP_DC = [0, 3, 6, 9, 12], CAP_DM = [-2, -1.5, -1, -0.5, 0, 0.5, 1, 2].map(e => 2 ** e);   // the safe-cap grid: c shift × d multiplier
 
 /* ================= cell-type vocabulary ================= */
@@ -1842,11 +1846,26 @@ fn axPath(w: f32) -> f32 { return w - floor(w / 4096.0) * 4096.0; }
 `;
 
 // Misc as the neuron and level kernels see it (the rewire kernel declares the shorter prefix it uses)
-const MISC_WGSL = /* wgsl */`struct Misc { stats: array<atomic<u32>, 32>, trace: array<f32, 1024>, gstats: array<atomic<u32>, ${GMAX}>, mcnt: array<atomic<u32>, ${GMAX}>, fx: array<vec4f, ${GMAX * MAX_TYPES * 2}> };`;
+const MISC_WGSL = /* wgsl */`struct Misc { stats: array<atomic<u32>, 32>, trace: array<f32, 1024>, gstats: array<atomic<u32>, ${GMAX}>, mcnt: array<atomic<u32>, ${GMAX}>, fx: array<vec4f, ${GMAX * MAX_TYPES * 2}>, glev: array<vec4f, ${GMAX}> };`;
 // acc = acc + arr[1] + ... + arr[31], one statement each, in order (an unrolled loop; see the neuron kernel)
 const SUM31 = (acc, arr) => Array.from({ length: 31 }, (_, j) => `${acc} = ${acc} + ${arr}[${j + 1}];`).join(' ');
-const NEURON_WGSL = STRUCTS + MISC_WGSL + /* wgsl */`
+// the modulator table (decay per tick, counts, projections, holds, receptors per type, cap grid), shared by the level
+// kernel and the neuron kernel (which reads the receptors and cap grid for cells in a painted cloud)
+const MODU_WGSL = /* wgsl */`
+struct ModU { dec: vec4f, k: vec4f, pj: array<vec4f, 16>, hold: array<vec4f, ${GMAX}>, rc: array<vec4f, ${MAX_TYPES * 8}>, capG: array<vec4f, ${MAX_TYPES * 10}> };
+// the cap drop on the grid point with the c shift rounded up and the d multiplier rounded down: the safe corner, because
+// the safe cap only falls as c rises or d falls (CAP_DC steps of 3 mV, CAP_DM half-octaves from 1/4 to 2, then 4)
+fn capDrop(t: u32, dc: f32, dm: f32) -> f32 {
+  let i = u32(clamp(ceil(dc / 3.0 - 1e-3), 0.0, 4.0));
+  let l = log2(clamp(dm, 0.25, 4.0));
+  let j = select(u32(clamp(floor(2.0 * l + 4.0 + 1e-3), 0.0, 6.0)), 7u, l > 1.999);
+  let k = t * 40u + i * 8u + j;
+  return mu.capG[k / 4u][k % 4u];
+}`;
+const NEURON_WGSL = STRUCTS + MISC_WGSL + MODU_WGSL + /* wgsl */`
 const SOMA_LOAD = ${SOMA_LOAD.toFixed(3)};
+@group(0) @binding(9) var<uniform> mu: ModU;
+@group(0) @binding(10) var<storage, read_write> cloud: array<vec4u>;   // the painted chemical cloud, per cell (layout at OBS_I32)
 @group(0) @binding(0) var<uniform> u: SimU;
 @group(0) @binding(1) var<uniform> ty: TypeU;
 @group(0) @binding(2) var<storage, read> nst: array<NStatic>;
@@ -1875,6 +1894,9 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: 
   let t = u.b.x; let dt = u.b.y; let seed = u32(u.b.z);
   let dead = (ns.info.w & 1u) == 1u;
   let psyE = u.d.x * ty.t[tyi * 4u + 1u].z;
+  // the cell's painted cloud, read up front so the load overlaps the tree's substeps (used by the soma thread below)
+  var cq = vec4u(0u);
+  if (isSoma && (u32(u.k.w) & 1u) != 0u && !dead) { cq = cloud[n]; }
   var cp = comps[ci];
   var V = cp.v;
   var syn = cSyn(cp);
@@ -1890,9 +1912,16 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: 
     if (gi != 0u) { rate = rate * ty.g[gi].y; }
     if (rnd(ci, seed * 3u + 1u) < rate * dt) { let amp = 4.5 * (0.4 + rnd(ci, seed * 3u + 2u)); syn.x = syn.x + amp; syn.y = syn.y + 0.06 * amp; }
     let wd = world + dispOf(ns, u.j.z);
-    if (u.h.x != 0.0 && (u.f.z == 0.0 || f32(gi) == u.f.z)) {   // f.z: the group brush touches only that group
+    // the brush (b.w = what it paints: 0 excite, 1 inhibit, 2–5 a chemical, which goes to the cell's cloud below instead).
+    // Inhibit is GABA: a conductance pulling the compartment toward 10 mV below rest, set from the voltage at the start of
+    // the step (capped so it cannot overshoot over the step), and it quenches any NMDA plateau it passes over
+    if (u.h.x != 0.0 && u.b.w < 1.5 && (u.f.z == 0.0 || f32(gi) == u.f.z)) {   // f.z: the group brush touches only that group
       let bd = distance(wd, u.g.xyz);
-      if (bd < u.g.w) { let f = 1.0 - bd / u.g.w; ext = ext + u.h.x * f; syn.y = max(syn.y, 1.2 * f); }
+      if (bd < u.g.w) {
+        let f = 1.0 - bd / u.g.w;
+        if (u.b.w < 0.5) { ext = ext + u.h.x * f; syn.y = max(syn.y, 1.2 * f); }
+        else { ext = ext + min(1.5, 0.05 * u.h.x * f) * (-10.0 - V); syn.z = syn.z * max(0.0, 1.0 - 0.1 * u.h.x * f); }
+      }
     }
     if (u.j.y != 0.0 && abs(dot(wd, u.i.xyz) - u.i.w) < u.j.x) { ext = ext + u.j.y; }
   }
@@ -1983,6 +2012,48 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: 
       if (f1.y < 0.0) { bE = min(bias, cap + f1.y); }
       ds.hist.w = pack2x16float(vec2f(f0.w - 1.0, f1.x - 1.0));
     }
+    // the painted chemical cloud (k.w = 1 while one is alive; b.w 2–5 paints chemical b.w − 2). Its levels decay with each
+    // chemical's tau from the time they were last written, so only cells inside the brush write. A clouded cell's effects
+    // come from its cloud plus its group's level (circuits), through its type's receptors, the same way as in the level kernel.
+    // The cloud has its own plain buffer (atomic loads from the inbox cost 8–12% of this kernel in Edge); drawing reads a
+    // copy of it in the inbox tail.
+    // A cell never painted (time 0) skips the rest, so an alive cloud costs the others only the read of cq above.
+    var clouded = false;
+    var dose = 0.0;
+    if ((u32(u.k.w) & 1u) != 0u && !dead) {
+      if (u.h.x != 0.0 && u.b.w > 1.5 && (u.f.z == 0.0 || f32(gi) == u.f.z)) {
+        let bd = distance(ns.pos.xyz + dispOf(ns, u.j.z), u.g.xyz);
+        if (bd < u.g.w) { dose = ${CLOUD_DOSE} * u.h.x * (1.0 - bd / u.g.w) * dt; }
+      }
+    }
+    if (cq.z != 0u || dose > 0.0) {
+      let age = max(0.0, t - bitcast<f32>(cq.z));
+      var Lc = vec4f(unpack2x16unorm(cq.x), unpack2x16unorm(cq.y)) * ${CLOUD_MAX}.0 * exp(log(mu.dec) * (age / ${(MOD_EVERY * DT).toFixed(1)}));
+      if (dose > 0.0) {
+        let lane = u32(u.b.w - 1.5);
+        Lc[lane] = min(${CLOUD_MAX}.0, Lc[lane] + dose);
+        cloud[n] = vec4u(pack2x16unorm(Lc.xy / ${CLOUD_MAX}.0), pack2x16unorm(Lc.zw / ${CLOUD_MAX}.0), bitcast<u32>(max(t, 0.001)), 0u);
+      }
+      if (any(Lc > vec4f(0.002))) {
+        clouded = true;
+        var L = Lc;
+        if (modOn) { L = L + misc.glev[gi]; }
+        let act = 1.5 * L / (0.5 + L);   // receptor activation, as in the level kernel
+        let rb = tyi * 8u;
+        let ef = mat4x4f(mu.rc[rb], mu.rc[rb + 2u], mu.rc[rb + 4u], mu.rc[rb + 6u]) * act;   // drive, tire, burst, louder
+        let learn = dot(act, vec4f(mu.rc[rb + 1u].x, mu.rc[rb + 3u].x, mu.rc[rb + 5u].x, mu.rc[rb + 7u].x));
+        let tire = ef.y;
+        let dc = clamp(${MOD_K.burst.toFixed(3)} * ef.z, 0.0, 12.0);
+        let dm = select(exp2(clamp(tire, -2.0, 2.0)), 1.0, tire == 0.0);
+        let am = select(exp2(-mu.k.y * clamp(tire, -2.0, 2.0)), 1.0, tire == 0.0 || mu.k.y == 0.0);
+        let og = clamp(1.0 + ${MOD_K.louder.toFixed(3)} * ef.w, 1.0, 2.2);
+        let lm = clamp(1.0 + ${MOD_K.learn.toFixed(3)} * learn, 1.0, 4.0);
+        let cd = capDrop(tyi, dc, dm);
+        mI = ${MOD_K.drive.toFixed(3)} * ef.x; cR = prm.z + dc; dR = prm.w * dm; aR = prm.x * am;
+        bE = bias; if (cd < 0.0) { bE = min(bias, cap + cd); }
+        ds.hist.w = pack2x16float(vec2f(og - 1.0, lm - 1.0));
+      } else if (!modOn) { ds.hist.w = 0u; }
+    }
     if (dead) { v = -70.0; uu = prm.y * -70.0; }
     else {
       let g1 = max(rnd(n, seed * 7u + 3u), 1e-7); let g2 = rnd(n, seed * 7u + 5u);
@@ -1992,7 +2063,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: 
       var nz = u.f.w;
       if (gi != 0u) { nz = nz * sqrt(ty.g[gi].y); }   // as if Ambient input were scaled: noise goes with its square root
       var I = sg * isoma / f32(nsub) + bE + tp.x + u.e.x + nz * gs + psyE * 1.5;
-      if (modOn) { I = I + mI; }
+      if (modOn || clouded) { I = I + mI; }
       // kick: a soma current into the excitatory cells of the groups in the f.x bit mask
       if (gi != 0u && u.f.x != 0.0 && ((u32(u.f.x) >> gi) & 1u) == 1u && tp.w > 0.5) { I = I + u.f.y; }
       if (ds.pace.x > 0.0 && t >= ds.pace.y) { ds.pace.z = 2.5; ds.pace.y = t + ds.pace.x; }
@@ -2081,7 +2152,7 @@ fn synapse(s: u32) {
   let cons = u.d.w > 0.5;
   // neuromodulators: the receiving cell's learning multiplier (dopamine) scales STDP and consolidation; it is ≥ 1, so
   // which synapses learn is unchanged (the gather pass keys on u.d.y > 0 too)
-  let mOn = (u32(u.k.z) & 1u) != 0u;
+  let mOn = (u32(u.k.z) & 1u) != 0u || (u32(u.k.w) & 1u) != 0u;   // k.w: a painted cloud is alive (any preset)
   var lr = u.d.y; var kc = u.d.z;
   if (mOn) { let lm = 1.0 + unpack2x16float(pd.hist.w).y; lr = lr * lm; kc = kc * lm; }
   var learn = exc && lr > 0.0 && (postSpk || dsRecent);
@@ -2168,8 +2239,7 @@ fn synapse(s: u32) {
 // levels into the effect table the neuron kernel reads, per (group, cell type): extra drive, reset c shift, d multiplier,
 // output gain, learning multiplier, and how far the homeostasis cap must drop for that c and d (0 or less). Integer counts and fixed-order sums keep
 // it deterministic under run().
-const MOD_WGSL = STRUCTS + MISC_WGSL + /* wgsl */`
-struct ModU { dec: vec4f, k: vec4f, pj: array<vec4f, 16>, hold: array<vec4f, ${GMAX}>, rc: array<vec4f, ${MAX_TYPES * 8}>, capG: array<vec4f, ${MAX_TYPES * 10}> };
+const MOD_WGSL = STRUCTS + MISC_WGSL + MODU_WGSL + /* wgsl */`
 @group(0) @binding(0) var<uniform> u: SimU;
 @group(0) @binding(1) var<uniform> mu: ModU;
 @group(0) @binding(2) var<storage, read_write> misc: Misc;
@@ -2177,15 +2247,6 @@ struct ModU { dec: vec4f, k: vec4f, pj: array<vec4f, 16>, hold: array<vec4f, ${G
 @group(0) @binding(4) var<storage, read_write> rec: array<u32>;
 var<workgroup> sCnt: array<u32, ${GMAX}>;
 var<workgroup> sL: array<f32, ${GMAX * 4}>;
-// the cap drop on the grid point with the c shift rounded up and the d multiplier rounded down: the safe corner, because
-// the safe cap only falls as c rises or d falls (CAP_DC steps of 3 mV, CAP_DM half-octaves from 1/4 to 2, then 4)
-fn capDrop(t: u32, dc: f32, dm: f32) -> f32 {
-  let i = u32(clamp(ceil(dc / 3.0 - 1e-3), 0.0, 4.0));
-  let l = log2(clamp(dm, 0.25, 4.0));
-  let j = select(u32(clamp(floor(2.0 * l + 4.0 + 1e-3), 0.0, 6.0)), 7u, l > 1.999);
-  let k = t * 40u + i * 8u + j;
-  return mu.capG[k / 4u][k % 4u];
-}
 @compute @workgroup_size(256)
 fn main(@builtin(local_invocation_index) li: u32) {
   let fl = u32(u.k.z);
@@ -2204,7 +2265,7 @@ fn main(@builtin(local_invocation_index) li: u32) {
     x = clamp(x, 0.0, 8.0);
     let h = mu.hold[g][c];
     if (h >= 0.0) { x = h; }
-    lev[li] = x; sL[li] = x;
+    lev[li] = x; sL[li] = x; misc.glev[g][c] = x;
   }
   workgroupBarrier();
   for (var e = li; e < ${GMAX * MAX_TYPES}u; e = e + 256u) {
@@ -2427,19 +2488,31 @@ struct RU { vp: mat4x4f, cam: vec4f, camR: vec4f, camU: vec4f, pa: vec4f, pb: ve
   look: vec4f, thick: vec4f, stain: vec4f, ex: vec4f, mask: vec4f, rect: vec4f, misc: vec4f, ap: vec4f,
   mode: vec4f, br: vec4f, br2: vec4f, tcol: array<vec4f, ${MAX_TYPES}>,
   // neuromodulators (display copies): level per group, group rate ÷ 20 Hz, chemical each group releases (lane + 1),
-  // receptor weight per type, the four chemicals' colours, and (haze gain, modulators present, -, -);
-  // then (axon opacity, tract opacity, soma stain, synapse stain), (soma, dendrite, synapse opacity, tract width),
-  // (spike colour mode, tract colour mode, -, -)
+  // receptor weight per type, the four chemicals' colours (w: decay rate per ms), and (haze gain, modulators present, a
+  // painted cloud alive, -); then (axon opacity, tract opacity, soma stain, synapse stain), (soma, dendrite, synapse
+  // opacity, tract width), (spike colour mode, tract colour mode, -, -), and the brush's colour (what it paints, -)
   mlev: array<vec4f, ${GMAX}>, grate: array<vec4f, ${GMAX / 4}>, gsrc: array<vec4f, ${GMAX / 4}>, rmask: array<vec4f, ${MAX_TYPES}>, chemc: array<vec4f, 4>, hz: vec4f,
-  vx: vec4f, vx2: vec4f, vx3: vec4f };
+  vx: vec4f, vx2: vec4f, vx3: vec4f, brc: vec4f };
 @group(0) @binding(0) var<uniform> ru: RU;
 fn modAct(gi: u32) -> vec4f { let L = ru.mlev[gi & ${GMAX - 1}u]; return 1.5 * L / (0.5 + L); }
 fn modSrc(gi: u32) -> u32 { return u32(ru.gsrc[(gi & ${GMAX - 1}u) / 4u][gi % 4u] + 0.5); }
 fn grateOf(gi: u32) -> f32 { return ru.grate[(gi & ${GMAX - 1}u) / 4u][gi % 4u]; }
-// Modulation view: each chemical reaching a receptor this cell carries, in its colour, weighted by level
-fn modTint(ns: NStatic) -> vec3f {
-  let gi = ns.info.z; if (gi == 0u) { return vec3f(0.0); }
-  let a = modAct(gi) * ru.rmask[ns.info.y];
+// a cell's painted chemical cloud, decayed to the drawn time (0 when no cloud is alive); the layout is at OBS_I32
+fn cloudOf(n: u32) -> vec4f {
+  if (ru.hz.z < 0.5) { return vec4f(0.0); }
+  let o = u32(ru.br2.y) * ${OBS_CLOUD}u + n * 4u;
+  let L = vec4f(unpack2x16unorm(bitcast<u32>(obs[o])), unpack2x16unorm(bitcast<u32>(obs[o + 1u]))) * ${CLOUD_MAX}.0;
+  let age = max(0.0, ru.look.w - bitcast<f32>(obs[o + 2u]));
+  return L * exp(-age * vec4f(ru.chemc[0].w, ru.chemc[1].w, ru.chemc[2].w, ru.chemc[3].w));
+}
+// the cloud's own colour (where the chemical is, receptors or not), for the other colour modes
+fn cloudCol(L: vec4f) -> vec3f { let a = L / (0.5 + L); return ru.chemc[0].xyz * a.x + ru.chemc[1].xyz * a.y + ru.chemc[2].xyz * a.z + ru.chemc[3].xyz * a.w; }
+// Modulation view: each chemical reaching a receptor this cell carries, in its colour, weighted by level (its group's plus
+// its painted cloud)
+fn modTint(n: u32, ns: NStatic) -> vec3f {
+  let gi = ns.info.z; var L = cloudOf(n);
+  if (gi == 0u) { if (all(L == vec4f(0.0))) { return vec3f(0.0); } } else { L = L + ru.mlev[gi & ${GMAX - 1}u]; }
+  let a = 1.5 * L / (0.5 + L) * ru.rmask[ns.info.y];
   return ru.chemc[0].xyz * a.x + ru.chemc[1].xyz * a.y + ru.chemc[2].xyz * a.z + ru.chemc[3].xyz * a.w;
 }
 fn srcCol(gi: u32) -> vec3f { let s = modSrc(gi); if (s == 0u) { return vec3f(0.0); } return ru.chemc[s - 1u].xyz; }
@@ -2458,7 +2531,6 @@ fn srcCol(gi: u32) -> vec3f { let s = modSrc(gi); if (s == 0u) { return vec3f(0.
 // colour modes, per part (ru.mode = cell bodies, dendrites, axons, synapses): 0 Garden, 1 Types, 2 Voltage, 3 Inhibition, 4 Memory, 5 Modulation
 const E_COL = vec3f(${LENS_COL.E}); const I_COL = vec3f(${LENS_COL.I});
 const L_POS = vec3f(${LENS_COL.Lp}); const L_NEG = vec3f(${LENS_COL.Ln}); const F_POS = vec3f(${LENS_COL.Fp}); const F_NEG = vec3f(${LENS_COL.Fn});
-const BR_COL = vec3f(1.0, 0.8, 0.55);
 fn sat(x: f32) -> f32 { return 1.0 - exp(-max(x, 0.0)); }
 fn typeCol(ns: NStatic) -> vec3f { return ru.tcol[ns.info.y].xyz; }
 // recorded inhibitory trace of one compartment, and a cell's summed excitation / inhibition (Inhibition view)
@@ -2658,11 +2730,12 @@ struct TOut { @builtin(position) pos: vec4f, @location(0) col: vec3f, @location(
     col = memCol(q.x, q.y) + vec3f(0.012, 0.011, 0.02) * (1.0 + clamp(vv / 20.0, 0.0, 2.0));
   } else {
     let a = clamp(vv / 30.0, 0.0, 1.6);
-    col = modTint(ns) * (0.16 + 0.45 * a) + srcCol(ns.info.z) * (0.08 + 0.4 * a) + vec3f(0.006, 0.006, 0.011) * (1.0 + a) + vec3f(0.25 * mm * mm);
+    col = modTint(n, ns) * (0.16 + 0.45 * a) + srcCol(ns.info.z) * (0.08 + 0.4 * a) + vec3f(0.006, 0.006, 0.011) * (1.0 + a) + vec3f(0.25 * mm * mm);
   }
+  if (md != 5u && ru.hz.z > 0.5) { let cl = cloudOf(n); if (any(cl > vec4f(0.03))) { col = col + cloudCol(cl) * 0.14; } }   // a painted cloud washes the tree
   o.col = select(col, vec3f(0.015), dead) * ru.look.z * fade * select(1.0, 0.8, R.nbr.w == 1) * ru.vx2.y;
   let bi = brushIn(select(pa, pb, atB));
-  if (bi > 0.0) { o.col = o.col + BR_COL * smoothstep(0.0, 0.3, bi) * 0.16 * ru.br2.x * ru.look.z * fade; }
+  if (bi > 0.0) { o.col = o.col + ru.brc.xyz * smoothstep(0.0, 0.3, bi) * 0.16 * ru.br2.x * ru.look.z * fade; }
   return o;
 }
 @fragment fn fs(i: TOut) -> @location(0) vec4f {
@@ -3004,9 +3077,10 @@ fn uvOf(corner: u32) -> vec2f { var q = array<vec2f, 6>(vec2f(-1.0, -1.0), vec2f
   let sel = ru.ex.w > 0.5 && n == u32(ru.ex.w - 1.0);
   let ring = sel || st.pace.x > 0.0;
   let bi = brushIn(c);
+  let cl = cloudOf(n); let inCloud = any(cl > vec4f(0.03));   // cells in a painted cloud show, tinted by it
   let key = h01(n, 17u);
-  if (key >= ru.vx.z && !ring && bi <= 0.0) { return o; }   // Soma stain (the dendrite stain's key, so stained trees keep theirs)
-  let stained = key < ru.stain.x || ring || bi > 0.0;
+  if (key >= ru.vx.z && !ring && bi <= 0.0 && !inCloud) { return o; }   // Soma stain (the dendrite stain's key, so stained trees keep theirs)
+  let stained = key < ru.stain.x || ring || bi > 0.0 || inCloud;
   var size = ru.thick.z * select(0.3, 0.4, isExc(ns)) * ns.pos.w * (1.0 + 1.1 * f) * select(0.55, 1.0, stained);
   if (ring) { size = size * 3.0; o.shape = vec2f(1.0, 3.0); } else { o.shape = vec2f(0.0, 1.0); }
   let corner = vi % 6u;
@@ -3031,10 +3105,11 @@ fn uvOf(corner: u32) -> vec2f { var q = array<vec2f, 6>(vec2f(-1.0, -1.0), vec2f
     o.col = memCol(q.x * 0.3, q.y * 0.3) * 1.2 + vec3f(0.02, 0.018, 0.03) + vec3f(0.5 * f * f);
   } else {
     // cells glow in the chemicals reaching their receptors; nuclei in the colour they release, flaring as they fire
-    o.col = vec3f(0.012, 0.012, 0.018) + modTint(ns) * (0.75 + 1.1 * f) + srcCol(ns.info.z) * (0.35 + 1.6 * f) + vec3f(0.5 * f * f);
+    o.col = vec3f(0.012, 0.012, 0.018) + modTint(n, ns) * (0.75 + 1.1 * f) + srcCol(ns.info.z) * (0.35 + 1.6 * f) + vec3f(0.5 * f * f);
   }
+  if (ms != 5u && inCloud && !dead) { o.col = o.col + cloudCol(cl) * (1.4 + 1.2 * f); }
   o.col = o.col * ru.look.z * select(0.3, 1.0, stained) * ru.vx2.x;
-  if (bi > 0.0) { o.col = o.col + BR_COL * smoothstep(0.0, 0.3, bi) * 1.6 * ru.br2.x * ru.look.z; }
+  if (bi > 0.0) { o.col = o.col + ru.brc.xyz * smoothstep(0.0, 0.3, bi) * 1.6 * ru.br2.x * ru.look.z; }
   let rc = select(pal(tint + 0.1), vec3f(0.75, 0.72, 0.9), ms != 0u);
   o.ringCol = select(rc * (0.4 + 1.2 * f), vec3f(0.9, 0.95, 1.0), sel) * ru.look.z;
   return o;
@@ -3094,8 +3169,28 @@ fn uvOf(corner: u32) -> vec2f { var q = array<vec2f, 6>(vec2f(-1.0, -1.0), vec2f
   if (r <= 0.0 || d <= r * 1.05) { return o; }
   let corner = vi % 6u;
   o.pos = ru.vp * quad(ru.br.xyz, r * d / sqrt(d * d - r * r), corner);
-  o.uv = uvOf(corner); o.col = BR_COL * (0.1 + 0.15 * ru.br2.x) * ru.look.z;
+  o.uv = uvOf(corner); o.col = ru.brc.xyz * (0.1 + 0.15 * ru.br2.x) * ru.look.z;
   return o;
+}
+// a painted chemical cloud as a soft mist: one wide, faint additive sprite per clouded cell, in the colour of what it holds
+// (every colour mode; drawn only while a cloud is alive). Cells hidden by a type filter or dead keep theirs out.
+@vertex fn vsCloud(@builtin(vertex_index) vi: u32, @builtin(instance_index) n: u32) -> SOut {
+  var o: SOut; o.pos = OFF; o.col = vec3f(0.0); o.uv = vec2f(0.0); o.shape = vec2f(0.0); o.ringCol = vec3f(0.0);
+  let cl = cloudOf(n);
+  if (!any(cl > vec4f(0.03))) { return o; }
+  let ns = nst[n];
+  if (!shown(ns) || (ns.info.w & 1u) == 1u) { return o; }
+  let c = ns.pos.xyz + dispOf(ns, ru.ex.x);
+  let a = cl / (0.5 + cl); let s = a.x + a.y + a.z + a.w;
+  let corner = vi % 6u;
+  o.pos = ru.vp * quad(c, 2.2 + 2.6 * min(s, 1.0), corner);
+  o.uv = uvOf(corner); o.col = cloudCol(cl) * 0.14 * ru.look.z * lodFade(c);
+  return o;
+}
+@fragment fn fsCloud(i: SOut) -> @location(0) vec4f {
+  let r2 = dot(i.uv, i.uv);
+  if (r2 > 1.0) { discard; }
+  return vec4f(i.col * exp(-r2 * 3.5) * (1.0 - r2), 1.0);
 }
 @fragment fn fsBrush(i: SOut) -> @location(0) vec4f {
   let r = length(i.uv);
@@ -3272,6 +3367,22 @@ if (DEBUG) window.__cg = { P, VIS, NET, COLOR, setLens: m => setLens(m), setBrus
     device.queue.writeBuffer(G.nStatic, 0, net.nStatic);
   },
   brushGroup: on => { brushGroupOn = !!on; },
+  // the brush's paint (index or key: excite, inhibit, DA, NA, ACh, 5HT), and the painted cloud now: per chemical, cells
+  // above 0.05, the highest level and the mean over those cells (decayed to the current simulated time)
+  setPaint: k => setPaint(typeof k === 'number' ? k : PAINTS.findIndex(p => p.key === k), true),
+  cloudUntil: v => { if (v != null) cloudUntil = v; return cloudUntil; },   // (perf A/B: 0 turns a cloud's reading off)
+  cloud: async () => {
+    const N = net.N, raw = await readBuf(G.cloud, 0, N * 16), u = new Uint32Array(raw), f = new Float32Array(raw), out = { alive: cloudAlive(), t: +simT.toFixed(0), until: +cloudUntil.toFixed(0) };
+    CHEM_KEYS.forEach((k, c) => {
+      let cells = 0, max = 0, sum = 0;
+      for (let n = 0; n < N; n++) {
+        const w = u[n * 4 + (c >> 1)], q = ((c & 1) ? w >>> 16 : w & 65535) / 65535 * CLOUD_MAX, L = q * Math.exp(-Math.max(0, simT - f[n * 4 + 2]) / chemTau(k));
+        if (L > 0.05) { cells++; sum += L; max = Math.max(max, L); }
+      }
+      out[k] = { cells, max: +max.toFixed(3), mean: +(cells ? sum / cells : 0).toFixed(3) };
+    });
+    return out;
+  },
   // neuromodulators: levels per group and chemical, read from the GPU ({ groupKey: { DA, NA, ACh, '5HT' } }, groups with input)
   modLevels: async () => {
     if (!hasMods()) return {};
@@ -3451,6 +3562,7 @@ if (DEBUG) window.__cg = { P, VIS, NET, COLOR, setLens: m => setLens(m), setBrus
     draw('dendrite tubes', rp => { rp.setBindGroup(0, G.bgDen); rp.setPipeline(pipes.tube); rp.draw(6, nDen * denSPC(nDen)); });
     draw('synapse sprites', rp => { rp.setBindGroup(0, G.bgDen); rp.setPipeline(pipes.synB); rp.draw(6, nDen * net.K); });
     draw('somata', rp => { rp.setBindGroup(0, G.bgDen); rp.setPipeline(pipes.soma); rp.draw(6, net.N); });
+    if (cloudAlive()) draw('cloud mist', rp => { rp.setBindGroup(0, G.bgDen); rp.setPipeline(pipes.cloud); rp.draw(6, net.N); });
     if (G.bgTract) draw('tracts', rp => { rp.setPipeline(pipes.tract); rp.setBindGroup(0, G.bgTract); rp.draw(6, net.tractN * 64); });
     draw('axon trees', rp => { rp.setBindGroup(0, G.bgAx); rp.setPipeline(pipes.axTree); rp.draw(6 * AXSUB, nAx * AXN); });
     draw('axon twigs', rp => { rp.setPipeline(pipes.axTwig); rp.setBindGroup(0, G.cAxT.bgDraw); rp.drawIndirect(G.cAxT.args, 0); rp.setBindGroup(0, G.cAxL.bgDraw); rp.drawIndirect(G.cAxL.args, 0); });
@@ -3530,7 +3642,7 @@ function buildPipelines() {
   const U = (vis, dyn = false, min = 0) => ({ visibility: vis, buffer: { type: 'uniform', hasDynamicOffset: dyn, ...(min ? { minBindingSize: min } : {}) } });
   const SB = (vis, rw) => ({ visibility: vis, buffer: { type: rw ? 'storage' : 'read-only-storage' } });
   const bgl = entries => device.createBindGroupLayout({ entries: entries.map((e, i) => ({ binding: i, ...e })) });
-  pipes.neuronBGL = bgl([U(CS, true, 192), U(CS), SB(CS, 0), SB(CS, 1), SB(CS, 0), SB(CS, 1), SB(CS, 1), SB(CS, 1), { visibility: CS, storageTexture: { access: 'write-only', format: 'rgba8unorm' } }]);
+  pipes.neuronBGL = bgl([U(CS, true, 192), U(CS), SB(CS, 0), SB(CS, 1), SB(CS, 0), SB(CS, 1), SB(CS, 1), SB(CS, 1), { visibility: CS, storageTexture: { access: 'write-only', format: 'rgba8unorm' } }, U(CS), SB(CS, 1)]);
   pipes.synBGL = bgl([U(CS, true, 192), U(CS), SB(CS, 1), SB(CS, 1), SB(CS, 1), SB(CS, 0), SB(CS, 0), SB(CS, 0), SB(CS, 0), SB(CS, 1), SB(CS, 0), SB(CS, 0)]);
   pipes.evBGL = bgl([U(CS, true, 192), SB(CS, 0), SB(CS, 0), SB(CS, 0), SB(CS, 0), SB(CS, 1), SB(CS, 1)]);
   pipes.csrBGL = bgl([U(CS), SB(CS, 0), SB(CS, 1), SB(CS, 1), SB(CS, 1)]);
@@ -3565,7 +3677,7 @@ function buildPipelines() {
   const spMod = mod(SPARK_WGSL);
   pipes.sparkSeg = rp(spMod, 'vsSeg'); pipes.sparkTwig = rp(spMod, 'vsTwig');
   const sprMod = mod(SPRITE_WGSL);
-  pipes.soma = rp(sprMod, 'vsSoma'); pipes.synB = rp(sprMod, 'vsSyn'); pipes.brush = rp(sprMod, 'vsBrush', add, 'rgba16float', 'fsBrush');
+  pipes.soma = rp(sprMod, 'vsSoma'); pipes.synB = rp(sprMod, 'vsSyn'); pipes.brush = rp(sprMod, 'vsBrush', add, 'rgba16float', 'fsBrush'); pipes.cloud = rp(sprMod, 'vsCloud', add, 'rgba16float', 'fsCloud');
   pipes.raster = rp(mod(RASTER_WGSL), 'vs', null, format);
   const post = (code, fmt, blend) => { const m = mod(code); return device.createRenderPipeline({ layout: 'auto', vertex: { module: m, entryPoint: 'vs' }, fragment: { module: m, entryPoint: 'fs', targets: [blend ? { format: fmt, blend } : { format: fmt }] }, primitive: { topology: 'triangle-list' } }); };
   pipes.trail = post(TRAIL_WGSL, 'rgba16float');
@@ -3700,20 +3812,26 @@ function writeModRender(d, now) {
   d.set(modDisp, RU_MLEV); d.set(grateDisp, RU_GRATE);
   if (on) {
     for (const m of net.circuit.mods) { const id = net.circuit.groups[m.from].id; if (!d[RU_GSRC + id]) d[RU_GSRC + id] = m.chem + 1; }
-    CT.forEach((t, i) => receptorsOf(t).forEach((r, c) => { d[RU_RMASK + i * 4 + c] = Math.min(1, Math.abs(r.drive) + Math.abs(r.tire) + r.burst + r.louder + r.learn); }));
   }
-  CHEM_LIN.forEach((c, i) => d.set([...c, 0], RU_CHEMC + i * 4));
-  d.set([effVis().haze ?? 1, on ? 1 : 0, 0, 0], RU_HZ);
+  if (on || cloudTable) CT.forEach((t, i) => receptorsOf(t).forEach((r, c) => { d[RU_RMASK + i * 4 + c] = Math.min(1, Math.abs(r.drive) + Math.abs(r.tire) + r.burst + r.louder + r.learn); }));
+  CHEM_LIN.forEach((c, i) => d.set([...c, 1 / chemTau(CHEM_KEYS[i])], RU_CHEMC + i * 4));   // w: decay rate per ms (the painted cloud)
+  d.set([effVis().haze ?? 1, on ? 1 : 0, cloudAlive() ? 1 : 0, 0], RU_HZ);
 }
 const chemTau = k => (CIRCUIT && CIRCUIT.chem && CIRCUIT.chem[k] && CIRCUIT.chem[k].tau) || CHEM[k].tau;
+// The painted chemical cloud (any preset): alive until 5 taus after the last chemical stroke, in simulated time.
+// cloudTable: the receptors and cap grid are written for every type (the cap grid takes a moment to compute, so only once
+// a chemical paint is first chosen).
+let cloudUntil = 0, cloudTable = false;
+const cloudAlive = () => simT < cloudUntil;
+function ensureCloudTable() { if (cloudTable) return; cloudTable = true; writeModTable(); }
 function writeModTable() {
   if (!G || !G.modU) return;
-  const d = new Float32Array(MODU_F32), mods = net.circuit.mods;
+  const d = new Float32Array(MODU_F32), mods = net.circuit ? net.circuit.mods : [];
   CHEM_KEYS.forEach((k, c) => { d[c] = Math.exp(-MOD_EVERY * DT / chemTau(k)); });
   d[4] = mods.length; d[5] = modTireA;
   mods.forEach((m, p) => d.set([m.from + 1, m.to + 1, m.chem, m.inc], 8 + p * 4));
   d.set(modHold, MODU_HOLD);
-  if (mods.length) CT.forEach((t, i) => {
+  if (mods.length || cloudTable) CT.forEach((t, i) => {
     receptorsOf(t).forEach((r, c) => { const o = MODU_RC + (i * 4 + c) * 8; d.set([r.drive, r.tire, r.burst, r.louder, r.learn], o); });
     if (!modNoCap) d.set(capGrid(izhOf(t)), MODU_CAPG + i * 40);
   });
@@ -3768,7 +3886,7 @@ async function rebuild() {
     const mz = (bytes, extra = 0) => { const b = zeroBuf(bytes, ST | extra); g.bufs.push(b); return b; };
     g.nStatic = mk(new Uint8Array(nStatic)); g.nState = mk(new Uint8Array(nState), GPUBufferUsage.COPY_SRC); g.comps = mz(N * C * 16, GPUBufferUsage.COPY_SRC); g.tpl = mk(new Uint8Array(tplArr));
     // the inbox: two input channels per compartment, then copies kept only for drawing (see OBS_I32)
-    g.inbox = mz(N * OBS_I32 * 4, DEBUG ? GPUBufferUsage.COPY_SRC : 0); g.misc = mz(MISC_ALL_U32 * 4, GPUBufferUsage.COPY_SRC);
+    g.inbox = mz(N * OBS_I32 * 4, GPUBufferUsage.COPY_DST | (DEBUG ? GPUBufferUsage.COPY_SRC : 0)); g.cloud = mz(N * 16, GPUBufferUsage.COPY_SRC); g.misc = mz(MISC_ALL_U32 * 4, GPUBufferUsage.COPY_SRC);
     g.synA = mk(synA, GPUBufferUsage.COPY_SRC); g.synW = mk(synW, GPUBufferUsage.COPY_SRC); g.synS = mk(synS, GPUBufferUsage.COPY_SRC);
     // event-driven synapses: the queue, its dispatch args [x, y, z, length, counter], and the outgoing index
     g.work = mz(NS * 4); g.outList = mz(NS * 4); g.outStart = mz((N + 1) * 4); g.cnt = mz(N * 4);
@@ -3780,8 +3898,10 @@ async function rebuild() {
     g.readback = device.createBuffer({ size: MISC_U32 * 4 + GMAX * 16, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }); g.bufs.push(g.readback);
     g.raster = device.createTexture({ size: [RASTER_W, RASTER_H], format: 'rgba8unorm', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     const B = b => ({ buffer: b });
+    // the modulator table: the level kernel's (circuits with modulators), and the receptors for a painted cloud (any preset)
+    g.modU = device.createBuffer({ size: MODU_F32 * 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }); g.bufs.push(g.modU);
     g.bgNeuron = device.createBindGroup({ layout: pipes.neuronBGL, entries: [{ binding: 0, resource: { buffer: g.simU, size: 192 } }, { binding: 1, resource: B(ruBuf.types) }, { binding: 2, resource: B(g.nStatic) }, { binding: 3, resource: B(g.nState) },
-      { binding: 4, resource: B(g.tpl) }, { binding: 5, resource: B(g.comps) }, { binding: 6, resource: B(g.inbox) }, { binding: 7, resource: B(g.misc) }, { binding: 8, resource: g.raster.createView() }] });
+      { binding: 4, resource: B(g.tpl) }, { binding: 5, resource: B(g.comps) }, { binding: 6, resource: B(g.inbox) }, { binding: 7, resource: B(g.misc) }, { binding: 8, resource: g.raster.createView() }, { binding: 9, resource: B(g.modU) }, { binding: 10, resource: B(g.cloud) }] });
     g.bgSyn = device.createBindGroup({ layout: pipes.synBGL, entries: [{ binding: 0, resource: { buffer: g.simU, size: 192 } }, { binding: 1, resource: B(ruBuf.types) }, { binding: 2, resource: B(g.synA) }, { binding: 3, resource: B(g.synW) }, { binding: 4, resource: B(g.synS) },
       { binding: 5, resource: B(g.nStatic) }, { binding: 6, resource: B(g.nState) }, { binding: 7, resource: B(g.tpl) }, { binding: 8, resource: B(g.comps) }, { binding: 9, resource: B(g.inbox) },
       { binding: 10, resource: B(g.work) }, { binding: 11, resource: B(g.wargs) }] });
@@ -3795,8 +3915,7 @@ async function rebuild() {
       g.tractFib = mk(net.tractFib);
       g.bgTract = device.createBindGroup({ layout: pipes.tract.getBindGroupLayout(0), entries: [[0, ruBuf.main], [1, ruBuf.types], [2, g.nStatic], [3, g.nState], [13, g.tractFib]].map(([binding, b]) => ({ binding, resource: B(b) })) });
     }
-    if (net.circuit) {   // neuromodulator levels, their table and the debug recorder (the level kernel runs only when needed)
-      g.modU = device.createBuffer({ size: MODU_F32 * 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }); g.bufs.push(g.modU);
+    if (net.circuit) {   // neuromodulator levels and the debug recorder (the level kernel runs only when needed)
       g.modBuf = mz(GMAX * 16, GPUBufferUsage.COPY_SRC); g.modRec = mz(MOD_REC * GMAX * 4, GPUBufferUsage.COPY_SRC);
       // the effect table starts as "no effect" (d and a × 1, gains 1), not zeros: the neuron kernel reads it before the first tick
       const fx = new Float32Array(GMAX * MAX_TYPES * 8); for (let i = 0; i < GMAX * MAX_TYPES; i++) fx.set([0, 0, 1, 1, 1, 0, 1, 0], i * 8);
@@ -3855,7 +3974,7 @@ async function rebuild() {
     rwTick = 0; rwStats = null;
     G = g;
     modHold.fill(CIRCUIT ? CIRCUIT.modHold : -1); modRecOn = false; modRecStart = 0;
-    simT = 0; stepCount = 0; kick = null; heldKey = null; rasterCol = 0; lastStats = null; readPending = false; acc = 0;
+    simT = 0; stepCount = 0; kick = null; heldKey = null; rasterCol = 0; lastStats = null; readPending = false; acc = 0; cloudUntil = 0;
     paceMap.clear(); for (const [n, per] of net.pace) paceMap.set(n, per);
     sel = -1; syncHud();
     typeCounts = CT.map(() => 0); for (let n = 0; n < N; n++) typeCounts[net.type[n]]++;
@@ -3923,6 +4042,19 @@ function camera() {
 let lastGroupHz = [];
 let simT = 0, stepCount = 0, rasterCol = 0, paused = false, sel = -1, homeoBoost = 1, typeCounts = [], lastTypeHz = [];
 const brush = { on: false, show: false, c: [0, 0, 0] };
+// What the brush paints (SimU b.w is the index): glutamate and GABA onto the dendrites inside the ball while you paint,
+// or a chemical into each cell's cloud, which lingers and fades with the chemical's tau. lin: the ball's colour (linear).
+const ICON_DROP = 'M12 3c-3.2 4.6-6 7.6-6 11.2a6 6 0 0 0 12 0C18 10.6 15.2 7.6 12 3z';
+const PAINTS = [
+  { key: 'excite', name: 'Excite', lin: [1, 0.8, 0.55], icon: 'M13 2 5 13.5h6L10 22l8-11.5h-6z',
+    tip: 'Glutamate onto every dendrite inside the ball, while you paint. Coincident input sets off NMDA dendritic spikes.' },
+  { key: 'inhibit', name: 'Inhibit', lin: [0.42, 0.62, 1], icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM7.5 12h9',
+    tip: 'GABA onto every dendrite inside the ball, while you paint: it holds them below rest, quenches their NMDA plateaus and silences the cells it covers.' },
+  ...CHEM_KEYS.map((k, c) => { const m = Math.max(...CHEM_LIN[c]); return { key: k, chem: k, name: CHEM[k].name, lin: CHEM_LIN[c].map(v => v / m), icon: ICON_DROP,
+    tip: `${CHEM[k].name} (${CHEM[k].role.toLowerCase()}) into each cell inside the ball. It lingers and fades over about ${(CHEM[k].tau / 1000).toFixed(1)} s, acting through each type’s receptors (Edit network, Types, Receptors).` }; }),
+];
+let paintIdx = 0;
+try { const k = localStorage.getItem('cg-paint'), i = PAINTS.findIndex(p => p.key === k); if (i > 0) paintIdx = i; } catch (e) { /* storage blocked */ }
 // whether cell bodies or dendrites are drawn from a recorded copy (Inhibition or Memory view)
 const drawnFrom = m => COLOR.soma === m || COLOR.den === m;
 let sweep = null;
@@ -3934,7 +4066,8 @@ let kick = null, brushGrp = 0, brushGroupOn = false;
 function writeSimUniforms(steps) {
   const buf = new Float32Array(steps * SLOT / 4), u32v = new Uint32Array(buf.buffer);
   const nsub = Math.max(4, Math.ceil(P.coupling * 4.5)), h = DT / nsub;
-  const sp = sweep ? sweepState() : null, recInhib = drawnFrom('inhib'), mf = modFlags();
+  const sp = sweep ? sweepState() : null, recInhib = drawnFrom('inhib'), mf = modFlags(), paint = PAINTS[paintIdx];
+  if (brush.on && paint.chem) cloudUntil = Math.max(cloudUntil, simT + steps * DT + 5 * chemTau(paint.chem));
   for (let k = 0; k < steps; k++) {
     const t = simT + k * DT, step = stepCount + k;
     let mod = 0, bgMul = 1;
@@ -3942,7 +4075,7 @@ function writeSimUniforms(steps) {
     if (P.sleep) { const up = Math.sin(6.283 * t / 1600) > 0.2; mod = up ? 1.5 : -7; bgMul = up ? 1.4 : 0.05; }
     const cons = step % CONS_EVERY === 0 ? 1 : 0, kc = P.consol * (P.sleep ? 10 : 1) / 12000 * CONS_EVERY * DT, rasterWrite = step % WIN.rasterSpan === 0 ? 1 : 0;
     buf.set([net.N, net.NS, G.wgN[0], G.wgS[0] * 256,
-      t, DT, step % 16777216, 0,
+      t, DT, step % 16777216, paintIdx,
       P.drive, P.inhib, P.coupling, P.nmdaTh,
       P.psy, P.lr, kc, cons,
       mod, bgMul, nsub, h,
@@ -3953,7 +4086,7 @@ function writeSimUniforms(steps) {
       2.4, sp ? 5.5 : 0, VIS.exH, recInhib ? 1 : 0,
       0, 0, 0, 0,
       homeoBoost * P.homeo, 1, 3.2, 5.2], k * SLOT / 4);
-    u32v[k * SLOT / 4 + 40] = (step + 1) >>> 0; buf[k * SLOT / 4 + 41] = net.K; buf[k * SLOT / 4 + 42] = mf;
+    u32v[k * SLOT / 4 + 40] = (step + 1) >>> 0; buf[k * SLOT / 4 + 41] = net.K; buf[k * SLOT / 4 + 42] = mf; buf[k * SLOT / 4 + 43] = t < cloudUntil ? 1 : 0;
     if (rasterWrite) rasterCol = (rasterCol + 1) % RASTER_W;
   }
   device.queue.writeBuffer(G.simU, 0, buf);
@@ -3981,6 +4114,7 @@ function writeRenderUniform(cam, now, rT) {
   d.set([VIS.axOpacity, E.tractOpacity, VIS.somaStain, VIS.synStain], RU_VX);
   d.set([VIS.somaOpacity, VIS.denOpacity, VIS.synOpacity, VIS.tractWidth], RU_VX2);
   d.set([MODE_KEYS.indexOf(COLOR.ap), MODE_KEYS.indexOf(COLOR.tract), 0, 0], RU_VX3);
+  d.set([...PAINTS[paintIdx].lin, 0], RU_BRC);
   writeModRender(d, now);
   device.queue.writeBuffer(ruBuf.main, 0, d);
 }
@@ -4076,12 +4210,14 @@ function frame(now) {
   }
   const cam = camera();
   writeRenderUniform(cam, now, rT);
+  if (cloudAlive()) enc.copyBufferToBuffer(G.cloud, 0, G.inbox, net.N * OBS_CLOUD * 4, net.N * 16);   // the cloud, for drawing
   const sp = enc.beginRenderPass({ colorAttachments: [{ view: postR.view.scene, clearValue: { r: 0, g: 0, b: 0, a: 1 }, loadOp: 'clear', storeOp: 'store' }] });
   const nDen = stainCount(net.denOrder.key, VIS.denStain), nAx = stainCount(net.axOrder.key, VIS.axStain);
   sp.setBindGroup(0, G.bgDen);
   if (E.denThick > 0 && VIS.denOpacity > 0 && nDen) { sp.setPipeline(pipes.tube); sp.draw(6, nDen * denSPC(nDen)); }
   if (E.synSize > 0 && VIS.synStain > 0 && VIS.synOpacity > 0 && nDen) { sp.setPipeline(pipes.synB); sp.draw(6, nDen * net.K); }
   if (E.somaSize > 0) { sp.setPipeline(pipes.soma); sp.draw(6, net.N); }
+  if (cloudAlive()) { sp.setPipeline(pipes.cloud); sp.draw(6, net.N); }
   if (brush.show) { sp.setPipeline(pipes.brush); sp.draw(6); }
   if (G.bgTract && VIS.tractWidth > 0 && E.tractOpacity > 0 && VIS.tractStain > 0) { sp.setPipeline(pipes.tract); sp.setBindGroup(0, G.bgTract); sp.draw(6, net.tractN * 64); }
   if (axOn && nAx) {
@@ -4242,7 +4378,7 @@ canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointerca
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
-  // with Excite, scrolling while painting (or with Shift held) moves the brush ball deeper or back toward you
+  // with the brush, scrolling while painting (or with Shift held) moves the brush ball deeper or back toward you
   if (tool === 'stim' && (e.shiftKey || brush.on)) { setBrushDepth(P.brushDepth - (e.deltaY || e.deltaX) * 0.03); return; }
   orbit.dist = Math.max(5, Math.min(3000, orbit.dist * Math.exp(e.deltaY * 0.001)));
 }, { passive: false });
@@ -4483,8 +4619,8 @@ function setupColour() {
 }
 function setLens(m) { for (const k in COLOR) COLOR[k] = m; colourChanged(); }
 function colourChanged() {
-  // the Modulation view is offered only where there are modulators
-  const mp = !!(net && net.circuit && net.circuit.mods.length);
+  // the Modulation view is offered only where there are modulators, or once a chemical paint has been chosen
+  const mp = !!(net && net.circuit && net.circuit.mods.length) || cloudTable;
   for (const k in COLOR) { if (!mp && COLOR[k] === 'mod') COLOR[k] = 'garden'; const s = $('col-' + k); if (s) { s.value = COLOR[k]; const o = s.querySelector('option[value=mod]'); if (o) o.hidden = !mp; } }
   [...$('lensChips').children].forEach((c, i) => { c.classList.toggle('on', Object.values(COLOR).every(v => v === MODE_KEYS[i])); if (MODE_KEYS[i] === 'mod') c.hidden = !mp; });
   renderTypeChips(); renderLegend(); if (net) renderGroups();
@@ -4528,15 +4664,17 @@ function renderLegend() {
       g.append(swatchRow(linCss(LENS_RGB.Lp), 'Lasting, stronger'), swatchRow(linCss(LENS_RGB.Ln), 'Lasting, weaker'), swatchRow(linCss(LENS_RGB.Fp), 'Fluid, stronger'), swatchRow(linCss(LENS_RGB.Fn), 'Fluid, weaker'));
       box.append(g, el('p', '', 'Fluid changes fade within seconds. Consolidation turns some of them lasting, ten times faster in Sleep.'));
     }
-    if (m === 'mod' && net && net.circuit) {
-      // one row per chemical present, named by what it does to the cell types that receive it here
-      const g = el('div', 'lrows'); g.style.gridTemplateColumns = '1fr';
-      for (const c of [...new Set(net.circuit.mods.map(q => q.chem))].sort()) {
+    if (m === 'mod' && net) {
+      // one row per chemical present (all four once the brush can paint them), named by what it does to the cell types
+      // that receive it here
+      const g = el('div', 'lrows'), mods = net.circuit ? net.circuit.mods : []; g.style.gridTemplateColumns = '1fr';
+      for (const c of cloudTable ? [0, 1, 2, 3] : [...new Set(mods.map(q => q.chem))].sort()) {
         const k = CHEM_KEYS[c], fx = new Set();
         CT.forEach(t => { const r = receptorsOf(t)[c]; if (r.drive > 0) fx.add(r.learn ? 'D1 excited' : 'excite'); if (r.drive < 0) fx.add(r.learn ? 'D2 quieted' : 'quiet'); if (r.tire > 0) fx.add('more tiring'); if (r.tire < 0) fx.add('less tiring'); if (r.burst) fx.add('burst mode'); if (r.louder) fx.add('louder output'); if (r.learn) fx.add('learn faster'); });
         g.append(swatchRow(linCss(CHEM_LIN[c], 1.2), `${CHEM[k].name} · ${[...fx].join(', ') || 'no receptors here'}`));
       }
-      box.append(g, el('p', '', 'The haze shows how much of each chemical is in a group; cells light up only where they carry the receptor. The nuclei glow in the colour they release.'));
+      box.append(g, el('p', '', mods.length ? 'The haze shows how much of each chemical is in a group; cells light up only where they carry the receptor. The nuclei glow in the colour they release.'
+        : 'Cells light up in the chemicals painted onto them, where they carry the receptor. The paint fades with each chemical’s own time.'));
     }
     host.append(box);
   }
@@ -4695,15 +4833,30 @@ function setupWindows() {
   addEventListener('resize', () => { if (net) fitRasterLabels(); });
   sizeRaster(); updateWindows();
 }
-// Excite brush options: hold the Excite button (or right-click it) to open a small drawer above the dock
+// Brush options: hold the brush button (or right-click it) to open a small drawer above the dock: what it paints, size, strength, depth
 const BRUSH_SLIDERS = {
-  brushSize: { o: P, label: 'Brush size', min: 1.5, max: 40, step: 0.1, fmt: v => `${v.toFixed(1)} units`, tip: 'Radius of the excitation brush. Cells sit about 3 units apart, so 40 floods a whole region.' },
-  brushStrength: { o: P, label: 'Brush strength', min: 1, max: 40, step: 0.1, fmt: v => v.toFixed(1), tip: 'How hard the brush drives the dendrites it touches. Strong brushes set off dendritic spikes and bursts almost everywhere they pass.' },
+  brushSize: { o: P, label: 'Brush size', min: 1.5, max: 40, step: 0.1, fmt: v => `${v.toFixed(1)} units`, tip: 'Radius of the brush ball. Cells sit about 3 units apart, so 40 floods a whole region.' },
+  brushStrength: { o: P, label: 'Brush strength', min: 1, max: 40, step: 0.1, fmt: v => v.toFixed(1), tip: 'How hard the brush acts. Excite: strong brushes set off dendritic spikes and bursts almost everywhere they pass. Inhibit: how firmly it holds the dendrites down. A chemical: how fast its level rises in the cells it covers (at 7, about one second of painting reaches level 1, the level a busy nucleus holds).' },
   brushDepth: { o: P, label: 'Brush depth', min: -10, max: 150, step: 0.5, fmt: v => Math.abs(v) < 0.25 ? 'just inside' : `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(1)} units`, tip: 'How far into the tissue the brush ball sits. At “just inside” it rests one radius behind the first cell under the cursor. Scroll while painting, or Shift-scroll while hovering, to push it deeper or pull it back.' },
 };
 let ringFlash = 0;
+// choose what the brush paints: the dock button takes its name and icon, the ball its colour. A chemical makes the
+// receptors and cap grid ready for every type, and offers the Modulation view and the receptor editor in any specimen.
+function setPaint(i, quiet) {
+  paintIdx = i; const p = PAINTS[i], btn = $('bExcite');
+  try { localStorage.setItem('cg-paint', p.key); } catch (e) { /* storage blocked */ }
+  btn.querySelector('span').textContent = p.name; btn.querySelector('path').setAttribute('d', p.icon);
+  btn.dataset.tipTitle = `Brush: ${p.name}`;
+  btn.dataset.tip = `Hold and drag to paint with the brush ball, which sits just inside the tissue under the cursor and lights the cells it holds. ${p.tip} Scroll while painting (or Shift-scroll) to push it deeper. Hold this button (or right-click it) to choose what it paints, and its size, strength and depth. Key S.`;
+  [...$('paintChips').children].forEach((c, j) => c.classList.toggle('on', j === i));
+  if (p.chem && !cloudTable) { ensureCloudTable(); if (net) { colourChanged(); if (!$('drawer').hidden) renderTypeEditor(); } }
+  if (!quiet) flashStatus(`Brush paints: ${p.name}`, 900);
+}
 function setupBrushPop() {
   const pop = $('brushPop'), btn = $('bExcite'), host = $('brushSliders');
+  chips($('paintChips'), PAINTS.map((p, i) => ({ key: i, label: p.name, tip: p.tip })), i => i === paintIdx, i => setPaint(i));
+  [...$('paintChips').children].forEach((c, i) => { const s = document.createElement('i'); s.className = 'pdot'; s.style.background = linCss(PAINTS[i].lin, 1.2); c.prepend(s); });
+  setPaint(paintIdx, true);
   for (const [key, sp] of Object.entries(BRUSH_SLIDERS)) host.appendChild(sliderRow(key, sp, () => { ringFlash = performance.now(); placeRing(); }, 'b-'));
   const open = () => {
     setTool('stim');
@@ -4943,7 +5096,7 @@ function renderTypeEditor() {
   group('Lands on', Object.entries(LANDS).map(([k, p]) => ({ key: k, label: p.name, tip: p.tip })), k => t.lands === k, k => { t.lands = k; setDirty(true); }, true);
   sec('Receptors', 'rec');
   s('psy', { label: '5-HT2A sensitivity', min: 0, max: 1.5, step: 0.01, fmt: v => `${v.toFixed(2)}×`, tip: 'How strongly this type responds to the 5-HT2A tone slider.' });
-  if (net && net.circuit && net.circuit.mods.length) renderReceptors(box, t);
+  if ((net && net.circuit && net.circuit.mods.length) || cloudTable) renderReceptors(box, t);
   sec('Shape', 'shape');
   s('reach', { label: 'Axon reach', min: 2, max: 20, step: 0.1, fmt: v => `${v.toFixed(1)} units`, tip: 'How far this type’s axon tree spreads. A bigger arbor touches more dendrites, so the type finds more partners further away.' }, true);
   group('Axon leaves', Object.entries(AXDIRS).map(([k, p]) => ({ key: k, label: p.name, tip: p.tip })), k => t.axdir === k, k => { t.axdir = k; setDirty(true); }, true);
