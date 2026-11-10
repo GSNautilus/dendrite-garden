@@ -14,8 +14,9 @@
   html { background: var(--bg); }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 "Familjen Grotesk", system-ui, sans-serif; }
   a { color: inherit; }
-  header.hero { position: relative; min-height: 80vh; display: flex; align-items: flex-end; overflow: hidden; }
-  header.hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 55% 45%; }
+  header.hero { position: relative; min-height: 58vh; display: flex; align-items: flex-end; overflow: hidden; }
+  /* the picture starts 16vw above the banner, so its empty top is cut and the neurons begin at the page's top edge */
+  header.hero img { position: absolute; left: 0; top: -16vw; width: 100%; height: calc(100% + 16vw); object-fit: cover; object-position: 55% 0; }
   header.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,5,10,.1) 0%, rgba(5,5,10,.15) 45%, var(--bg) 100%), linear-gradient(90deg, rgba(5,5,10,.85) 0%, rgba(5,5,10,0) 55%); }
   header .wrap { position: relative; z-index: 1; padding-bottom: 7vh; width: 100%; }
   figure.wrap.shot { margin-top: 0; margin-bottom: 0; } .shot img { display: block; width: 100%; height: auto; border: 1px solid var(--line); background: #000; }
