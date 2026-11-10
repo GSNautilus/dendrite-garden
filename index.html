@@ -14,8 +14,11 @@
   html { background: var(--bg); }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 "Familjen Grotesk", system-ui, sans-serif; }
   a { color: inherit; }
-  header.top { padding: 48px 0 28px; }
-  figure.wrap.shot { margin-top: 36px; margin-bottom: 0; } .shot img { display: block; width: 100%; height: auto; border: 1px solid var(--line); background: #000; }
+  header.hero { position: relative; min-height: 80vh; display: flex; align-items: flex-end; overflow: hidden; }
+  header.hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 55% 45%; }
+  header.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,5,10,.1) 0%, rgba(5,5,10,.15) 45%, var(--bg) 100%), linear-gradient(90deg, rgba(5,5,10,.85) 0%, rgba(5,5,10,0) 55%); }
+  header .wrap { position: relative; z-index: 1; padding-bottom: 7vh; width: 100%; }
+  figure.wrap.shot { margin-top: 0; margin-bottom: 0; } .shot img { display: block; width: 100%; height: auto; border: 1px solid var(--line); background: #000; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
   .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--faint); }
   h1 { font: 700 clamp(44px, 8vw, 104px)/1 "Unbounded", sans-serif; margin: 14px 0 18px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; letter-spacing: -.02em; }
@@ -44,11 +47,12 @@
   .card .go::after { content: " →"; }
   footer { margin-top: 64px; border-top: 1px solid var(--line); padding: 28px 0 48px; color: var(--faint); font-size: 15px; }
   footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; }
-  @media (max-width: 860px) { .feats, .grid, .shots { grid-template-columns: 1fr; } }
+  @media (max-width: 860px) { .feats, .grid, .shots { grid-template-columns: 1fr; } header.hero { min-height: 70vh; } }
 </style>
 </head>
 <body>
-<header class="top">
+<header class="hero">
+  <img src="img/hero.jpg" alt="The starting garden: neurons with branching dendrites, coloured by their voltage.">
   <div class="wrap">
     <div class="mono">A neuron sandbox</div>
     <h1>Dendrite Garden</h1>
@@ -59,8 +63,8 @@
       <!-- the video: one line here, a link (<a class="btn" href="…">Watch the video</a>) or an embed -->
     </div>
   </div>
-  <figure class="wrap shot"><img src="img/top.png" width="1484" height="1032" alt="The cortex patch, a column of mouse visual cortex, each group of neurons in its own colour."></figure>
 </header>
+<figure class="wrap shot"><img src="img/top.png" width="1484" height="1032" alt="The cortex patch, a column of mouse visual cortex, each group of neurons in its own colour."></figure>
 
 <main class="wrap">
   <section>
