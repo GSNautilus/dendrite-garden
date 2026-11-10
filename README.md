@@ -2,7 +2,9 @@
 
 A neuron sandbox: neurons grown from real reconstructions, with ion channels and synapses taken from published recordings, simulated live in the browser on the graphics card. Build groups of them, wire them, and change anything while they run.
 
-![The starting garden: neurons with branching dendrites, coloured by their voltage](img/hero.jpg)
+![The cortex patch, a column of mouse visual cortex, each group of neurons in its own colour](img/top.png)
+
+*The cortex patch, a column of mouse visual cortex of 1,827 neurons, each group in its own colour.*
 
 **The site: https://gsnautilus.github.io/dendrite-garden/**
 
