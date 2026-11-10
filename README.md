@@ -1,18 +1,23 @@
 # Dendrite Garden
 
-A psychedelic, beauty-first simulator of spiking neurons with living dendrites, running live in the browser.
+A neuron sandbox: neurons grown from real reconstructions, with ion channels and synapses taken from published recordings, simulated live in the browser on the graphics card. Build groups of them, wire them, and change anything while they run.
 
-**Site: https://gsnautilus.github.io/dendrite-garden/**
+![The starting garden: neurons with branching dendrites, coloured by their voltage](img/hero.jpg)
 
-- [`cortex.html`](https://gsnautilus.github.io/dendrite-garden/cortex.html) — **Cortex Garden**, the main garden: 5,000 to 100,000 Izhikevich neurons, each with up to 31 electrical dendrite compartments (cable diffusion, NMDA plateaus, back-propagating spikes). Synapses form only where an axon passes close to a dendrite, and they learn (short-term plasticity, STDP, consolidation) and rewire. Raw WebGPU, no libraries.
-- [`tadpole/`](https://gsnautilus.github.io/dendrite-garden/tadpole/) — **The Tadpole**, a guide to Cortex Garden's 30,000-neuron specimen: groups of neurons with jobs, wired so that swimming, feeding and learning emerge from spikes alone. Labelled renders from every angle and a wiring diagram.
-- [`cochlea.html`](https://gsnautilus.github.io/dendrite-garden/cochlea.html) — **Cochlea Garden**: the inner ear as neurons, driven by real audio.
-- [`garden.html`](https://gsnautilus.github.io/dendrite-garden/garden.html) — the original **Dendrite Garden** (three.js, CPU), which runs in any browser.
+**The site: https://gsnautilus.github.io/dendrite-garden/**
 
-Cortex Garden and Cochlea Garden need WebGPU: a recent Chrome or Edge, or Firefox 141+ on Windows.
+- [**The garden**](https://gsnautilus.github.io/dendrite-garden/cortex.html): the page itself. It opens on a small garden of three groups, running.
+- [**The manual**](https://gsnautilus.github.io/dendrite-garden/manual.html): how to use the page, step by step, with pictures. Its [list of sources](https://gsnautilus.github.io/dendrite-garden/manual.html#sources) gives the published work the garden's numbers, forms and data rest on.
+- [**The guide for agents**](agents.md): every call of the page's API, `window.garden`, for an AI agent or a script building gardens through it.
 
-## Running locally
+## What it simulates
 
-Every page is a single HTML file with no build step: open it in a browser. Add `#debug` to a simulator's URL to expose `window.__cg` (deterministic stepping, checksums, profiling).
+Each neuron has a body, the start of an axon where its spikes begin, and its own tree of dendrites grown from a group of mouse neuron reconstructions (the Allen Cell Types Database). Its membrane carries channel types from their papers (sodium, potassium, the M-current, calcium and calcium-activated potassium), held in a library that can be edited in the page. Its synapses are conductances with the short-term dynamics measured between real cells. Groups sit in regions of tissue with layers, and the garden menu builds a patch of mouse visual cortex of 1,827 neurons.
 
-`tools/` holds the headless test driver (`cdp.mjs`, Chrome DevTools Protocol), the regression tests (`tools/tests/`) and the renderer for the Tadpole guide (`tools/guide/`).
+## What a browser needs
+
+WebGPU. As of November 2026 the garden has run in Microsoft Edge 157 and Firefox 148 on Windows 11 with an NVIDIA GeForce RTX 3060; other browsers and graphics cards have not been tried. Where a browser has no WebGPU, or a graphics card cannot give the page what it needs, the page says so.
+
+## The older gardens
+
+The site as it stood in October 2026 (Cortex Garden with simpler neurons, the Tadpole guide, Cochlea Garden and the original Dendrite Garden) is kept as it was in [`2026-10/`](https://gsnautilus.github.io/dendrite-garden/2026-10/).

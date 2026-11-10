@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dendrite Garden manual</title>
+<meta name="description" content="How to use Dendrite Garden: the garden, its groups, connections, library, view and space, and the sources it rests on.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #05050a; --panel: #0e0e18; --line: #22223a; --ink: #f1f0fa; --dim: #a9a8c2; --faint: #6d6c88; --accent: #9ad8ff;
+    --grad: linear-gradient(90deg, #ffb38a, #ff8ad8 35%, #9ab8ff 70%, #9affd8); }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.65 "Familjen Grotesk", system-ui, sans-serif; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--faint); }
+  header { padding: 56px 0 8px; }
+  header .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  header .top a { color: var(--dim); text-decoration: none; font-size: 15px; }
+  h1 { font: 700 clamp(36px, 6vw, 64px)/1.05 "Unbounded", sans-serif; margin: 18px 0 14px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { max-width: 720px; color: #dcdbef; font-size: 19px; margin: 0 0 22px; }
+  .btn { display: inline-flex; align-items: center; padding: 10px 18px; border-radius: 999px; text-decoration: none; font-weight: 600; background: var(--ink); color: var(--bg); }
+  nav.toc { margin: 34px 0 10px; padding: 18px 22px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
+  nav.toc ol { margin: 8px 0 0; padding-left: 22px; columns: 2; column-gap: 40px; }
+  nav.toc li { break-inside: avoid; } nav.toc a { color: var(--ink); text-decoration: none; } nav.toc a:hover { color: var(--accent); }
+  section { padding: 40px 0 8px; border-top: 1px solid var(--line); margin-top: 40px; }
+  h2 { font: 500 clamp(24px, 3vw, 32px)/1.2 "Unbounded", sans-serif; margin: 6px 0 14px; }
+  h3 { font-size: 19px; margin: 26px 0 6px; font-weight: 600; }
+  p, li { color: #d6d5ea; } p { max-width: 780px; }
+  ol.do, ul.plain { max-width: 800px; padding-left: 22px; } ol.do li, ul.plain li { margin: 4px 0; }
+  b, strong { color: var(--ink); font-weight: 600; }
+  .k { font: 500 13px/1 "JetBrains Mono", monospace; padding: 3px 7px; border: 1px solid #3a3a5a; border-bottom-width: 2px; border-radius: 6px; background: #12121e; color: var(--ink); white-space: nowrap; }
+  figure { margin: 18px 0 8px; } figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+  figure.half { max-width: 560px; } figcaption { color: var(--faint); font-size: 14px; margin-top: 6px; }
+  .note { border-left: 3px solid #3a3a5a; padding: 4px 0 4px 14px; color: var(--dim); max-width: 780px; }
+  table.keys { border-collapse: collapse; margin: 10px 0; } table.keys td { padding: 6px 16px 6px 0; vertical-align: top; color: #d6d5ea; border-bottom: 1px solid var(--line); }
+  ol.refs { padding-left: 22px; max-width: 900px; } ol.refs li { margin: 0 0 14px; } ol.refs .on { display: block; color: var(--dim); font-size: 15px; }
+  footer { margin-top: 64px; border-top: 1px solid var(--line); padding: 26px 0 48px; color: var(--faint); font-size: 15px; }
+  footer a { color: var(--dim); }
+  @media (max-width: 760px) { nav.toc ol { columns: 1; } }
+</style>
+</head>
+<body>
+<header class="wrap">
+  <div class="top"><a href="./">← Dendrite Garden</a><a class="btn" href="cortex.html">Open the garden</a></div>
+  <div class="mono" style="margin-top:28px">The manual</div>
+  <h1>Using Dendrite Garden</h1>
+  <p class="lede">A guide for someone opening the garden for the first time: what each part of the page is for, and how to do the common things with it. It ends with the published sources the garden's numbers, forms and data rest on.</p>
+  <p class="note">Written for the page as it stood on 10 November 2026. Every step below was done on the page itself by a script, which took the pictures. What a browser needs is at the end of <a href="#open">Opening it</a>.</p>
+  <nav class="toc" aria-label="Contents"><div class="mono">Contents</div>
+    <ol>
+      <li><a href="#open">Opening it and looking around</a></li>
+      <li><a href="#run">The run strip and the garden menu</a></li>
+      <li><a href="#group">A group: adding one, its settings, its membrane</a></li>
+      <li><a href="#connection">A connection and its card</a></li>
+      <li><a href="#library">The Library</a></li>
+      <li><a href="#view">The View</a></li>
+      <li><a href="#space">Space and Move</a></li>
+      <li><a href="#acts">Touching, brushing, probing and lesioning</a></li>
+      <li><a href="#files">Saving and loading</a></li>
+      <li><a href="#patch">The cortex patch</a></li>
+      <li><a href="#keys">The keys</a></li>
+      <li><a href="#sources">Sources</a></li>
+    </ol>
+  </nav>
+</header>
+
+<main class="wrap">
+<section id="open">
+  <div class="mono">1</div><h2>Opening it and looking around</h2>
+  <p>Open <a href="cortex.html">the garden</a>. It starts at once on the <b>starting garden</b>: three groups of six neurons (<b>L5</b>, spiny layer 5 cells; <b>L23</b>, spiny layer 2/3 cells; <b>PV</b>, aspiny Pvalb interneurons), wired by five connections, with a little background input from the rest of a brain the garden does not simulate. Each neuron grows its own tree of dendrites from a group of real mouse reconstructions, and its membrane carries ion channels taken from published recordings. What you see is the simulation as it runs: by default the cell bodies and dendrites are coloured by their voltage, and a spike lights its axon as it travels.</p>
+  <figure><img src="manual/01-open.jpg" alt="The garden as it opens: the panel with the circuit graph on the left, the neurons in the middle, the windows on the right, the run strip at the top and the dock at the bottom." loading="lazy"><figcaption>The page as it opens: the panel (left), the tissue (middle), the windows (right), the run strip (top), the dock (bottom).</figcaption></figure>
+  <h3>Moving around the tissue</h3>
+  <ul class="plain">
+    <li><b>Drag</b> in the tissue to turn it, <b>right-drag</b> to pan, and <b>scroll</b> to zoom.</li>
+    <li><span class="k">H</span> hides the panel and the windows, leaving the tissue, the run strip and the dock; <span class="k">H</span> again brings them back.</li>
+    <li>The dock's <b>Panel</b> button shows or hides the panel. Its <b>Windows</b> button chooses which windows show: the <b>spike raster</b> (spikes from a sample of neurons, newest on the right), the <b>group bars</b> (each group's firing rate), the <b>colour key</b>, <b>Stats</b> (neurons, synapses, the mean rate, how fast the garden runs) and the <b>Probe</b> trace.</li>
+  </ul>
+  <h3>What a browser needs</h3>
+  <p>The garden runs its neurons on the graphics card, through WebGPU. As of November 2026 it has run in Microsoft Edge 157 and Firefox 148 on Windows 11 with an NVIDIA GeForce RTX 3060; other browsers and graphics cards have not been tried. Where a browser has no WebGPU, or a graphics card cannot give the page what it needs, the page says so instead of starting.</p>
+</section>
+
+<section id="run">
+  <div class="mono">2</div><h2>The run strip and the garden menu</h2>
+  <figure><img src="manual/02-run-strip.jpg" alt="The run strip: the garden's name, Pause, Speed, Background, Regrow, the clock and the question mark." loading="lazy"></figure>
+  <ul class="plain">
+    <li><b>Pause</b> stops the garden's time; you can still look, probe and change things. Pressed again, it runs. (<span class="k">Space</span> does the same.)</li>
+    <li><b>Speed</b> sets how much garden time passes each second of yours, shown beside it (it opens at 30 ms a second). Slow it down to watch a spike leave the axon.</li>
+    <li><b>Background</b> sets how much input each neuron gets from the rest of a brain the garden does not simulate: none at 0, each neuron's full background at 1. It opens at 0.25.</li>
+    <li><b>Regrow</b> grows the whole garden again from its settings at a new seed: new trees and new wiring, every change you made kept.</li>
+    <li>The clock shows the garden's time. The <b>?</b> lists the keys when you point at it, and opens this manual when you click it.</li>
+  </ul>
+  <h3>The garden menu</h3>
+  <p>Click the garden's name at the left of the run strip. The menu offers the <b>Starting garden</b>; the same <b>three groups, unwired</b>; <b>10,000 neurons</b> in 20 groups; the <b>Cortex patch</b> (see <a href="#patch">below</a>); and <b>Empty</b>, to build your own. Below them are <b>Save to a file…</b> and <b>Load from a file…</b> (see <a href="#files">Saving and loading</a>). <span class="k">Esc</span> closes the menu.</p>
+  <figure class="half"><img src="manual/03-garden-menu.jpg" alt="The garden menu open below the run strip." loading="lazy"></figure>
+</section>
+
+<section id="group">
+  <div class="mono">3</div><h2>A group: adding one, its settings, its membrane</h2>
+  <p>The panel's <b>Circuit</b> tab is a graph of the garden: each group is a node, each connection a capsule on a wire between two nodes. A node shows the group's number key, its name, its transmitter, its neuron count, its morphology, its firing rate, and its input resistance and time constant (measured on its own neurons). Its buttons mute the group, clone it (⧉) or remove it (✕). On its left are its <b>jacks</b>, where connections land (body, dendrites, tuft where its trees have one, band); on its right, its <b>axon</b>.</p>
+  <h3>Adding a group</h3>
+  <ol class="do">
+    <li>Click <b>+ Group</b> above the graph (or double-click an empty part of the graph).</li>
+    <li>Pick a morphology from the menu: twenty groups of mouse reconstructions, by layer, each listed with the transmitter a new group of it starts with (glutamate for the spiny ones, GABA-A or GABA-B for the aspiny ones). The new group starts with six neurons. It appears as a node, and its neurons in the tissue beside the garden, once the change lands. Its transmitter is its own setting, which its Settings tab changes.</li>
+  </ol>
+  <figure class="half"><img src="manual/04-add-group.jpg" alt="The + Group menu listing the morphologies." loading="lazy"></figure>
+  <p class="note">A change that takes longer than a frame (the neurons grown again, or the garden laid out again) is <b>pending</b> until it lands between two steps, and the run strip counts what is pending. The marks beside each setting say which it is: ● lands within a frame, ◐ the neurons recomputed, ◆ structural.</p>
+  <h3>Its settings</h3>
+  <p>A node has three tabs: <b>Activity</b> (its spikes over the last second and one neuron's trace), <b>Settings</b> and <b>Membrane</b>. <b>Settings</b> holds the group's morphology, transmitter and number of <b>Neurons</b>; its trees' <b>Tree size</b>, <b>Branch thickness</b> and <b>Branch complexity</b>; its <b>NMDA share</b>; its background (excitatory and inhibitory rates, excitatory volley); and its place (its region, its trunks' direction and lean, the layer its tufts reach). Each dial has a centre and a spread (±): each neuron draws its own value from them.</p>
+  <ol class="do">
+    <li>Open the node's <b>Settings</b> tab.</li>
+    <li>Type a number into <b>Neurons</b> (here 10), or move a dial's slider, such as <b>Tree size</b>.</li>
+  </ol>
+  <figure><img src="manual/05-settings.jpg" alt="A new group's node with its Settings tab open." loading="lazy"></figure>
+  <h3>Its membrane</h3>
+  <p><b>Membrane</b> is a table of the group's zones (soma, axon start, basal, apical and tuft dendrites) against its leak, each channel type in the library and, where the library holds calcium, the calcium's buffers, pumps and stores. Click a cell to edit it below the table: a channel's <b>Amount</b> and its <b>Profile</b> with distance from the soma, or the leak's conductance and reversal. Under it, the <b>Gates</b> grid shifts each gate's curve and changes its speed, for this group alone.</p>
+  <ol class="do">
+    <li>Open the node's <b>Membrane</b> tab.</li>
+    <li>Click a cell, here sodium at the soma, and move its <b>Amount</b>.</li>
+  </ol>
+  <figure><img src="manual/06-membrane.jpg" alt="The same node with its Membrane tab open and sodium at the soma picked." loading="lazy"></figure>
+</section>
+
+<section id="connection">
+  <div class="mono">4</div><h2>A connection and its card</h2>
+  <ol class="do">
+    <li>Drag from a node's <b>axon</b> (its right edge) to a jack of another node: <b>body</b>, <b>dendrites</b>, <b>tuft</b> or <b>band</b>. That is where the connection's synapses land. Here, the new group's axon to L5's dendrites.</li>
+    <li>Click the connection's capsule on its wire to open its <b>card</b>.</li>
+    <li>Change what you need: <b>Lands on</b>, <b>Synapses</b> (each receiving neuron's count, here 12), <b>Store</b> (each synapse's strength), <b>Dynamics</b> (its short-term plasticity, from a table of measured synapse classes), <b>NMDA share</b>, <b>Fibre speed</b> and <b>Route</b> (each axon on its own, or bundled in a tract).</li>
+  </ol>
+  <p>The card's ⧉ clones the connection and ✕ removes it.</p>
+  <figure><img src="manual/07-connection.jpg" alt="A connection's card open on its wire, showing Lands on, Synapses, Store, Dynamics, NMDA share, Fibre speed and Route." loading="lazy"></figure>
+</section>
+
+<section id="library">
+  <div class="mono">5</div><h2>The Library</h2>
+  <p>The <b>Library</b> tab holds the garden's channel types, grouped by ion: sodium; the slow potassium, the M-current and SK; and two high-voltage-activated calcium types. Click a type to open it in the editor: its name, ion, reversal and source; the temperature its numbers were measured at and its Q10; and its gates, each in one of a few standard forms. <b>+ New</b>, <b>Duplicate</b> and <b>Remove</b> add and remove types; a type is used by a group once the group's Membrane gives it an amount.</p>
+  <figure><img src="manual/08-library.jpg" alt="The Library tab with the SK type open in the editor." loading="lazy"></figure>
+</section>
+
+<section id="view">
+  <div class="mono">6</div><h2>The View</h2>
+  <p>The <b>View</b> tab changes how the garden is drawn, never what it computes. <b>Scene</b> has the brightness, bloom and trails. <b>Colour</b> chooses what colours each part: the chips at the top (<b>Voltage</b>, <b>Groups</b>, <b>Inhibition</b>, <b>Garden</b>) set every part at once, and each part's own menu sets it alone (the dendrites, for instance, by <b>Ions</b>, the currents flowing through them, or by a <b>Channels</b> type's current). <b>Groups drawn</b> hides or shows a group, <b>Parts</b> each part (dendrites, axons, tracts, cell bodies, synapses, spikes, inhibition), and <b>Camera</b> sets the spin.</p>
+  <figure><img src="manual/09-view-groups.jpg" alt="The garden coloured by its groups, with the View tab open." loading="lazy"><figcaption>Colour → Groups: each group in its own colour.</figcaption></figure>
+  <figure class="half"><img src="manual/10-view.jpg" alt="The View tab with the dendrites coloured by Ions." loading="lazy"></figure>
+</section>
+
+<section id="space">
+  <div class="mono">7</div><h2>Space and Move</h2>
+  <p>Every group sits in a <b>region</b> of tissue: a ball, shells, a slab, a column, a band, a cord or a ring, cut into layers along its axis. The <b>Space</b> tab lists the regions with their groups. Click a region to open it: its name, shape, place (x, y, z in µm), turn and size are typed in; its side view below shows its layers and each group's range, whose lines and ends can be dragged; its table of layers takes names and thicknesses. Here the new group's region is opened and its x typed 120 µm further on.</p>
+  <figure><img src="manual/11-space.jpg" alt="The Space tab with a region opened: its list of regions, its fields and its side view." loading="lazy"></figure>
+  <h3>Move</h3>
+  <ol class="do">
+    <li>Choose <b>Move</b> in the dock (<span class="k">M</span>).</li>
+    <li>Click a neuron: its region is picked, and handles appear at its centre: arrows along x, y and z, squares for the planes and, for a shape with an axis, rings that turn it.</li>
+    <li>Drag a handle. While you drag, the outline and the cell bodies show where the region would stand; let go to move it there. <span class="k">O</span> or <span class="k">Esc</span> goes back to Orbit.</li>
+  </ol>
+  <figure><img src="manual/12-move.jpg" alt="A region's Move handles in the tissue while its x arrow is dragged." loading="lazy"></figure>
+</section>
+
+<section id="acts">
+  <div class="mono">8</div><h2>Touching, brushing, probing and lesioning</h2>
+  <ul class="plain">
+    <li><b>Touch</b>: hold a number key, <span class="k">1</span> to <span class="k">9</span>, to drive the group with that number on its node (the groups in the order they were added) for as long as you hold it; several can be held at once. A node's <b>Touch (hold)</b> button in its Activity tab does the same while you hold it.</li>
+    <li><b>Brush</b>: choose <b>Excite</b> in the dock (<span class="k">S</span>), then hold and drag over the tissue to paint input onto the dendrites under the brush. Hold the button (or right-click it) for the brush's options: <b>Excite</b> or <b>Inhibit</b>, its size, strength and depth.</li>
+    <li><b>Probe</b>: choose <b>Probe</b> (<span class="k">I</span>) and click a neuron. The Probe window then records its voltage.</li>
+    <li><b>Lesion</b>: choose <b>Lesion</b> (<span class="k">L</span>) and click a neuron to silence it; click it again to revive it.</li>
+  </ul>
+  <figure><img src="manual/13-brush.jpg" alt="The brush painting excitation onto the tissue." loading="lazy"></figure>
+  <figure class="half"><img src="manual/14-probe.jpg" alt="The Stats and Probe windows, the Probe recording a neuron's voltage." loading="lazy"></figure>
+</section>
+
+<section id="files">
+  <div class="mono">9</div><h2>Saving and loading</h2>
+  <ol class="do">
+    <li>In the garden menu, <b>Save to a file…</b> saves the garden as a file in your downloads: its groups, regions, connections and library, with the view, camera, speed, graph, panel and windows.</li>
+    <li><b>Load from a file…</b> opens a saved garden: it is grown again from its settings, starting at rest, with its view and layout. A file the page cannot read is refused, and nothing changes.</li>
+  </ol>
+</section>
+
+<section id="patch">
+  <div class="mono">10</div><h2>The cortex patch</h2>
+  <p>Choose <b>Cortex patch</b> in the garden menu. It builds a column of mouse primary visual cortex 150 µm across, its layers L1 to L6 at their thicknesses, with 17 groups (1,827 neurons) at their densities, the pyramidal cells' tufts reaching L1, and 186 connections, from a published model of mouse visual cortex (Billeh and colleagues, 2020) and the Allen Institute's synaptic physiology data. It takes about 15 seconds to build. Its firing has not been tuned. Keys <span class="k">1</span>–<span class="k">4</span> touch its pyramidal layers, <span class="k">5</span>–<span class="k">8</span> its Pvalb groups and <span class="k">9</span> L1; the Space tab shows its layers.</p>
+  <figure><img src="manual/15-cortex-patch.jpg" alt="The cortex patch: a column of neurons in five layers." loading="lazy"></figure>
+</section>
+
+<section id="keys">
+  <div class="mono">11</div><h2>The keys</h2>
+  <table class="keys">
+    <tr><td><span class="k">O</span></td><td>Orbit: drag turns the tissue, right-drag pans, scroll zooms</td></tr>
+    <tr><td><span class="k">M</span></td><td>Move a region</td></tr>
+    <tr><td><span class="k">S</span></td><td>The brush</td></tr>
+    <tr><td><span class="k">I</span></td><td>Probe</td></tr>
+    <tr><td><span class="k">L</span></td><td>Lesion</td></tr>
+    <tr><td><span class="k">R</span></td><td>Spin the camera, and stop it</td></tr>
+    <tr><td><span class="k">Space</span></td><td>Pause, and run</td></tr>
+    <tr><td><span class="k">N</span></td><td>The Circuit tab</td></tr>
+    <tr><td><span class="k">F</span></td><td>The graph full-screen, and back</td></tr>
+    <tr><td><span class="k">H</span></td><td>Hide the panel and windows, and show them</td></tr>
+    <tr><td><span class="k">1</span>–<span class="k">9</span> held</td><td>Touch a group</td></tr>
+    <tr><td><span class="k">Esc</span></td><td>Close a menu</td></tr>
+  </table>
+</section>
+
+<section id="sources">
+  <div class="mono">12</div><h2>Sources</h2>
+  <p>The published work the garden's numbers, forms and data rest on. Each entry says what in the garden rests on it.</p>
+  <h3>The channels</h3>
+  <ol class="refs">
+    <li>Colbert CM, Pan E (2002). Ion channel properties underlying axonal action potential initiation in pyramidal neurons. <i>Nature Neuroscience</i> 5(6), 533–538. <span class="on">The sodium channel type.</span></li>
+    <li>Korngreen A, Sakmann B (2000). Voltage-gated K<sup>+</sup> channels in layer 5 neocortical pyramidal neurones from young rats: subtypes and gradients. <i>Journal of Physiology</i> 525.3, 621–639. <span class="on">The slow potassium channel type.</span></li>
+    <li>Guan D, Higgs MH, Horton LR, Spain WJ, Foehring RC (2011). Contributions of Kv7-mediated potassium current to sub- and suprathreshold responses of rat layer II/III neocortical pyramidal neurons. <i>Journal of Neurophysiology</i> 106, 1722–1733. <span class="on">The M-current channel type.</span></li>
+    <li>Almog M, Korngreen A (2009). Characterization of voltage-gated Ca<sup>2+</sup> conductances in layer 5 neocortical pyramidal neurons from rats. <i>PLoS ONE</i> 4(4), e4841. <span class="on">The two high-voltage-activated calcium types.</span></li>
+    <li>Hirschberg B, Maylie J, Adelman JP, Marrion NV (1998). Gating of recombinant small-conductance Ca-activated K<sup>+</sup> channels by calcium. <i>Journal of General Physiology</i> 111, 565–581. <span class="on">The SK channel type, opened by calcium.</span></li>
+    <li>Hay E, Hill S, Schürmann F, Markram H, Segev I (2011). Models of neocortical layer 5b pyramidal cells capturing a wide range of dendritic and perisomatic active properties. <i>PLoS Computational Biology</i> 7(7), e1002107. <span class="on">The sodium and slow potassium types' Q10 and the potassium reversal.</span></li>
+    <li>Kole MHP, Ilschner SU, Kampa BM, Williams SR, Ruben PC, Stuart GJ (2008). Action potential generation requires a high sodium channel density in the axon initial segment. <i>Nature Neuroscience</i> 11(2), 178–186. <span class="on">The axon start's length.</span></li>
+    <li>Hu W, Tian C, Li T, Yang M, Hou H, Shu Y (2009). Distinct contributions of Na<sub>v</sub>1.6 and Na<sub>v</sub>1.2 in action potential initiation and backpropagation. <i>Nature Neuroscience</i> 12(8), 996–1004. <span class="on">The axon start's diameter.</span></li>
+  </ol>
+  <h3>The calcium inside the cells</h3>
+  <ol class="refs" start="9">
+    <li>Helmchen F, Imoto K, Sakmann B (1996). Ca<sup>2+</sup> buffering and action potential-evoked Ca<sup>2+</sup> signaling in dendrites of pyramidal neurons. <i>Biophysical Journal</i> 70, 1069–1081. <span class="on">The buffered calcium in each compartment: its resting level, the buffers' capacity and how fast it clears.</span></li>
+    <li>Neher E, Augustine GJ (1992). Calcium gradients and buffers in bovine chromaffin cells. <i>Journal of Physiology</i> 450, 273–301. <span class="on">The buffered single compartment the calcium follows.</span></li>
+    <li>Markram H, Helm PJ, Sakmann B (1995). Dendritic calcium transients evoked by single back-propagating action potentials in rat neocortical pyramidal neurons. <i>Journal of Physiology</i> 485.1, 1–20. <span class="on">The calcium's clearing shared between the membrane's pumps and the internal stores, and its temperature dependence.</span></li>
+  </ol>
+  <h3>The synapses</h3>
+  <ol class="refs" start="12">
+    <li>Markram H, Wang Y, Tsodyks M (1998). Differential signaling via the same axon of neocortical pyramidal neurons. <i>Proceedings of the National Academy of Sciences USA</i> 95, 5323–5328. <span class="on">Synapse classes' short-term dynamics, and the form of the short-term plasticity.</span></li>
+    <li>Natschläger T, Maass W (2001). Computing the optimally fitted spike train for a synapse. <i>Neural Computation</i> 13, 2477–2494. <span class="on">The form in which the short-term plasticity is computed.</span></li>
+    <li>Wang Y, Markram H, Goodman PH, Berger TK, Ma J, Goldman-Rakic PS (2006). Heterogeneity in the pyramidal network of the medial prefrontal cortex. <i>Nature Neuroscience</i> 9(4), 534–542. <span class="on">Excitatory synapse classes' short-term dynamics.</span></li>
+    <li>Gupta A, Wang Y, Markram H (2000). Organizing principles for a diversity of GABAergic interneurons and synapses in the neocortex. <i>Science</i> 287, 273–278. <span class="on">Inhibitory synapse classes' short-term dynamics.</span></li>
+    <li>Markram H, Muller E, Ramaswamy S, Reimann MW, et al. (2015). Reconstruction and simulation of neocortical microcircuitry. <i>Cell</i> 163, 456–492. <span class="on">A synapse class's short-term dynamics, and how the release fraction follows the calcium outside the cells.</span></li>
+    <li>Rozov A, Burnashev N, Sakmann B, Neher E (2001). Transmitter release modulation by intracellular Ca<sup>2+</sup> buffers in facilitating and depressing nerve terminals of pyramidal cells in layer 2/3 of the rat neocortex indicates a target cell-specific difference in presynaptic calcium dynamics. <i>Journal of Physiology</i> 531.3, 807–826. <span class="on">How the release fraction follows the calcium outside the cells.</span></li>
+    <li>Tamás G, Lőrincz A, Simon A, Szabadics J (2003). Identified sources and targets of slow inhibition in the neocortex. <i>Science</i> 299, 1902–1905. <span class="on">The GABA-B synapse class.</span></li>
+    <li>Pala A, Petersen CCH (2015). In vivo measurement of cell-type-specific synaptic connectivity and synaptic transmission in layer 2/3 mouse barrel cortex. <i>Neuron</i> 85, 68–75. <span class="on">The class of excitatory synapses onto fast-spiking interneurons.</span></li>
+  </ol>
+  <h3>The axons</h3>
+  <ol class="refs" start="20">
+    <li>Hirsch JA, Gilbert CD (1991). Synaptic physiology of horizontal connections in the cat's visual cortex. <i>Journal of Neuroscience</i> 11(6), 1800–1809. <span class="on">The fibres' conduction speed.</span></li>
+    <li>Salami M, Itami C, Tsumoto T, Kimura F (2003). Change of conduction velocity by regional myelination yields constant latency irrespective of distance between thalamus and cortex. <i>Proceedings of the National Academy of Sciences USA</i> 100(10), 6174–6179. <span class="on">The fibres' conduction speed.</span></li>
+  </ol>
+  <h3>The background</h3>
+  <ol class="refs" start="22">
+    <li>Destexhe A, Paré D (1999). Impact of network activity on the integrative properties of neocortical pyramidal neurons in vivo. <i>Journal of Neurophysiology</i> 81, 1531–1547. <span class="on">The background's contacts, its rates, and how its events spread over the soma and dendrites.</span></li>
+    <li>Destexhe A, Rudolph M, Fellous J-M, Sejnowski TJ (2001). Fluctuating synaptic conductances recreate in vivo-like activity in neocortical neurons. <i>Neuroscience</i> 107(1), 13–24. <span class="on">The background's contacts, its events' size and their correlation.</span></li>
+  </ol>
+  <h3>The cortex patch and the data</h3>
+  <ol class="refs" start="24">
+    <li>Billeh YN, Cai B, Gratiy SL, et al. (2020). Systematic integration of structural and functional data into multi-scale models of mouse primary visual cortex. <i>Neuron</i> 106, 388–403. <span class="on">The cortex patch: its groups and their densities, its connections and their probabilities, where they land and their strengths, and L4's depth.</span></li>
+    <li>Campagnola L, Seeman SC, Chartrand T, et al. (2022). Local connectivity and synaptic dynamics in mouse and human neocortex. <i>Science</i> 375(6585), eabj5861. <span class="on">The paper of the Synaptic Physiology dataset below.</span></li>
+    <li>Allen Institute for Brain Science. Synaptic Physiology dataset, release 2.1. <span class="on">The cortex patch's other layers' thicknesses, and the short-term dynamics its synapse classes are checked against. Its primary publication is entry 25, cited with it as the Allen Institute's citation policy asks.</span></li>
+    <li>Allen Institute for Brain Science. Allen Cell Types Database: mouse neuron reconstructions. <span class="on">The 20 morphologies every neuron's tree is grown from.</span></li>
+  </ol>
+</section>
+</main>
+
+<footer><div class="wrap"><a href="./">Dendrite Garden</a> · <a href="cortex.html">the garden</a> · <a href="agents.html">the guide for agents</a></div></footer>
+</body>
+</html>

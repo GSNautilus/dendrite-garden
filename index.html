@@ -4,131 +4,117 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dendrite Garden</title>
-<meta name="description" content="Spiking neurons with living dendrites, simulated live in your browser.">
+<meta name="description" content="A neuron sandbox: neurons grown from real reconstructions, with ion channels from published recordings, simulated live in your browser on the GPU.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@300;500;700&display=swap" rel="stylesheet">
 <style>
   :root { --bg: #05050a; --panel: #0e0e18; --line: #22223a; --ink: #f1f0fa; --dim: #a9a8c2; --faint: #6d6c88;
-    --a: #ff9ad5; --b: #9ad8ff; --c: #c9ff9a; --grad: linear-gradient(90deg, #ffb38a, #ff8ad8 35%, #9ab8ff 70%, #9affd8); }
+    --grad: linear-gradient(90deg, #ffb38a, #ff8ad8 35%, #9ab8ff 70%, #9affd8); }
   * { box-sizing: border-box; }
   html { background: var(--bg); }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 "Familjen Grotesk", system-ui, sans-serif; }
   a { color: inherit; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
   .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--faint); }
-
-  header.hero { position: relative; min-height: 78vh; display: flex; align-items: flex-end; overflow: hidden; }
-  header.hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 40%; opacity: .9; }
-  header.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,5,10,.15) 0%, rgba(5,5,10,.2) 45%, var(--bg) 100%), linear-gradient(90deg, rgba(5,5,10,.85) 0%, rgba(5,5,10,0) 55%); }
+  header.hero { position: relative; min-height: 80vh; display: flex; align-items: flex-end; overflow: hidden; }
+  header.hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 55% 45%; }
+  header.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,5,10,.1) 0%, rgba(5,5,10,.15) 45%, var(--bg) 100%), linear-gradient(90deg, rgba(5,5,10,.85) 0%, rgba(5,5,10,0) 55%); }
   header .wrap { position: relative; z-index: 1; padding-bottom: 7vh; width: 100%; }
   h1 { font: 700 clamp(44px, 8vw, 104px)/1 "Unbounded", sans-serif; margin: 14px 0 18px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; letter-spacing: -.02em; }
-  .lede { max-width: 620px; font-size: clamp(18px, 2.2vw, 22px); color: #dcdbef; margin: 0 0 28px; }
+  .lede { max-width: 640px; font-size: clamp(18px, 2.2vw, 22px); color: #dcdbef; margin: 0 0 28px; }
   .btns { display: flex; flex-wrap: wrap; gap: 12px; }
   .btn { display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 999px; text-decoration: none; font-weight: 600; border: 1px solid var(--line); background: rgba(14,14,24,.7); backdrop-filter: blur(6px); }
   .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
   .btn:hover { border-color: #555578; } .btn.primary:hover { background: #fff; }
-
   section { padding: 72px 0 24px; }
   h2 { font: 500 clamp(26px, 3.4vw, 36px)/1.15 "Unbounded", sans-serif; margin: 10px 0 14px; }
-  .intro { max-width: 760px; color: var(--dim); margin: 0 0 36px; }
-  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
-  .card { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; text-decoration: none; transition: border-color .2s, transform .2s; }
-  .card:hover { border-color: #4a4a70; transform: translateY(-2px); }
-  .card img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #000; }
-  .card .body { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
-  .card h3 { margin: 0; font: 500 22px/1.2 "Unbounded", sans-serif; }
-  .card p { margin: 0; color: var(--dim); }
-  .card .go { margin-top: auto; padding-top: 10px; font-weight: 600; color: var(--ink); }
-  .card .go::after { content: " →"; }
-  .tagrow { display: flex; gap: 8px; flex-wrap: wrap; }
-  .pill { font: 500 11px/1 "JetBrains Mono", monospace; letter-spacing: .08em; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
-
+  .intro { max-width: 780px; color: var(--dim); margin: 0 0 30px; }
   .feats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
   .feat { border-top: 1px solid var(--line); padding-top: 16px; }
-  .feat h4 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+  .feat h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
   .feat p { margin: 0; color: var(--dim); font-size: 16px; }
+  .shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+  .shots figure { margin: 0; } .shots img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border: 1px solid var(--line); border-radius: 16px; background: #000; }
+  .shots figcaption { color: var(--faint); font-size: 15px; margin-top: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+  .card { display: flex; flex-direction: column; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 22px 22px 24px; text-decoration: none; transition: border-color .2s, transform .2s; }
+  .card:hover { border-color: #4a4a70; transform: translateY(-2px); }
+  .card h3 { margin: 0; font: 500 21px/1.2 "Unbounded", sans-serif; }
+  .card p { margin: 0; color: var(--dim); }
+  .card .go { margin-top: auto; padding-top: 10px; font-weight: 600; }
+  .card .go::after { content: " →"; }
   footer { margin-top: 64px; border-top: 1px solid var(--line); padding: 28px 0 48px; color: var(--faint); font-size: 15px; }
   footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; }
-  @media (max-width: 760px) { .grid, .feats { grid-template-columns: 1fr; } header.hero { min-height: 70vh; } header.hero img { object-position: 70% 30%; } }
+  @media (max-width: 860px) { .feats, .grid, .shots { grid-template-columns: 1fr; } header.hero { min-height: 70vh; } }
 </style>
 </head>
 <body>
 <header class="hero">
-  <img src="img/hero.jpg" alt="The Tadpole, a 30,000-neuron specimen, swimming: its choice lobe and tail glow with spikes.">
+  <img src="img/hero.jpg" alt="The starting garden: neurons with branching dendrites, coloured by their voltage.">
   <div class="wrap">
-    <div class="mono">Spiking neurons with living dendrites</div>
+    <div class="mono">A neuron sandbox</div>
     <h1>Dendrite Garden</h1>
-    <p class="lede">A psychedelic simulator of real spiking neurons, grown in 3D and run live on your graphics card. Every glow is a voltage, every spark a spike. Nothing is scripted.</p>
+    <p class="lede">Neurons grown from real reconstructions, with ion channels and synapses taken from published recordings, simulated live on your graphics card. Build groups of them, wire them, and change anything while they run.</p>
     <div class="btns">
-      <a class="btn primary" href="cortex.html">Open Cortex Garden</a>
-      <a class="btn" href="tadpole/">Meet the Tadpole</a>
+      <a class="btn primary" href="cortex.html">Open the garden</a>
+      <a class="btn" href="manual.html">Read the manual</a>
+      <!-- the video: one line here, a link (<a class="btn" href="…">Watch the video</a>) or an embed -->
     </div>
   </div>
 </header>
 
 <main class="wrap">
   <section>
-    <div class="mono">The gardens</div>
-    <h2>Four ways in</h2>
-    <p class="intro">Cortex Garden and Cochlea Garden need a browser with WebGPU: a recent Chrome or Edge, or Firefox 141 or later on Windows. The original Dendrite Garden runs in any browser. Drag to orbit, scroll to zoom, and press H to hide the panels.</p>
-    <div class="grid">
-      <a class="card" href="cortex.html">
-        <img src="img/cortex.jpg" alt="A bloom of thousands of neurons with branching dendrites in pink, green and gold.">
-        <div class="body">
-          <div class="tagrow"><span class="pill">WebGPU</span><span class="pill">5k – 100k neurons</span></div>
-          <h3>Cortex Garden</h3>
-          <p>The main garden. Up to 100,000 Izhikevich neurons, each with a tree of electrical dendrites, wired only where an axon touches a dendrite. Synapses learn, consolidate, wither and sprout while you watch. Excite it with a brush, probe a cell, put it to sleep.</p>
-          <span class="go">Open</span>
-        </div>
-      </a>
-      <a class="card" href="tadpole/">
-        <img src="img/tadpole.jpg" alt="The Tadpole seen from the side, its groups of neurons coloured by type.">
-        <div class="body">
-          <div class="tagrow"><span class="pill">Guide</span><span class="pill">30k neurons · 22 groups</span></div>
-          <h3>The Tadpole</h3>
-          <p>A whole little animal, built from groups of neurons with jobs. Touch it and it swims; feed it and it feeds; pair light with food and it learns. A labelled guide to every group, from every angle, with a wiring diagram.</p>
-          <span class="go">Read the guide</span>
-        </div>
-      </a>
-      <a class="card" href="cochlea.html">
-        <img src="img/cochlea.jpg" alt="A spiral of auditory nerve cells around a twisting nerve, glowing purple, blue and green.">
-        <div class="body">
-          <div class="tagrow"><span class="pill">WebGPU</span><span class="pill">Audio</span></div>
-          <h3>Cochlea Garden</h3>
-          <p>The inner ear as neurons. A spiral ganglion of 15,000 cells, each tuned to its own pitch, listens to test sounds, an audio file or your audio input, and fires along its nerve as the music plays.</p>
-          <span class="go">Open</span>
-        </div>
-      </a>
-      <a class="card" href="garden.html">
-        <img src="img/garden.jpg" alt="A small glowing ball of neurons with luminous dendrites.">
-        <div class="body">
-          <div class="tagrow"><span class="pill">Any browser</span><span class="pill">three.js</span></div>
-          <h3>Dendrite Garden, the original</h3>
-          <p>Where it began: a few hundred neurons with living dendrites, simulated on the CPU. Blooms, tori, phyllotaxis, fractal trees and mandalas, with sound.</p>
-          <span class="go">Open</span>
-        </div>
-      </a>
+    <div class="mono">What it is</div>
+    <h2>A garden of living neurons</h2>
+    <p class="intro">Every neuron in the garden has a body, the start of an axon where its spikes begin, and its own tree of dendrites, grown from a group of mouse neuron reconstructions. Its membrane carries channel types described in published recordings, and its synapses have the short-term dynamics measured between real cells. Everything is drawn as it happens: voltage, the currents flowing, each spike travelling down its axon.</p>
+    <div class="feats">
+      <div class="feat"><h3>Grown trees</h3><p>Twenty groups of mouse reconstructions, spiny and aspiny, from layer 1 to layer 6. Each neuron grows its own tree from its group; its size, thickness and branching are dials.</p></div>
+      <div class="feat"><h3>Ion channels</h3><p>Sodium, potassium, the M-current, calcium and calcium-activated potassium, each from its paper, in a library you can edit, placed zone by zone.</p></div>
+      <div class="feat"><h3>Synapses</h3><p>Conductance synapses with measured short-term dynamics, landing on the body, the dendrites, the tuft or a band of each receiving tree.</p></div>
+      <div class="feat"><h3>Groups and connections</h3><p>A circuit graph of groups and the connections between them, each with its own settings, changed while the garden runs.</p></div>
+      <div class="feat"><h3>Tissue</h3><p>Every group sits in a region of tissue with layers: a column, a slab, a ball, a band. A cortex patch of 1,827 neurons is one menu item away.</p></div>
+      <div class="feat"><h3>Your own hands</h3><p>Touch a group, brush excitation or inhibition onto the tissue, probe a neuron's voltage, lesion it. Save a garden to a file and load it again.</p></div>
     </div>
   </section>
 
   <section>
-    <div class="mono">What is simulated</div>
-    <h2>Real neurons, drawn as they think</h2>
-    <div class="feats">
-      <div class="feat"><h4>Spiking cells</h4><p>Izhikevich neurons in ten firing patterns, from regular spiking and bursting to chattering, fast-spiking and rebound.</p></div>
-      <div class="feat"><h4>Living dendrites</h4><p>Up to 31 compartments per cell, with cable diffusion, NMDA plateaus and spikes travelling back up the tree.</p></div>
-      <div class="feat"><h4>Contact wiring</h4><p>Axons grow first. A synapse can only form where an axon passes close to another cell's dendrite.</p></div>
-      <div class="feat"><h4>Learning</h4><p>Short-term plasticity, STDP, consolidation from fluid to lasting weights, and structural rewiring.</p></div>
-      <div class="feat"><h4>Neuromodulators</h4><p>Dopamine, noradrenaline, acetylcholine and serotonin, released by nuclei and drawn as coloured haze.</p></div>
-      <div class="feat"><h4>Circuits</h4><p>Groups of neurons with jobs, wired by projections, so that behaviour emerges from spikes alone.</p></div>
+    <div class="mono">In the garden</div>
+    <h2>As it runs</h2>
+    <div class="shots">
+      <figure><img src="img/garden.jpg" alt="The garden's page: the circuit graph, the neurons and the windows." loading="lazy"><figcaption>The starting garden: three groups, five connections.</figcaption></figure>
+      <figure><img src="img/patch.jpg" alt="The cortex patch, a column of mouse visual cortex, each group in its own colour." loading="lazy"><figcaption>The cortex patch, coloured by its groups.</figcaption></figure>
     </div>
+  </section>
+
+  <section>
+    <div class="mono">Start here</div>
+    <h2>Ways in</h2>
+    <div class="grid">
+      <a class="card" href="cortex.html"><h3>The garden</h3><p>Opens on a small garden of three groups, running. Drag to turn it, scroll to zoom, and press ? in its top bar for this site's manual.</p><span class="go">Open</span></a>
+      <a class="card" href="manual.html"><h3>The manual</h3><p>How to use the page, step by step, with pictures, and the list of published sources the garden rests on.</p><span class="go">Read</span></a>
+      <a class="card" href="agents.html"><h3>For agents</h3><p>The garden has an API in the page, <code>window.garden</code>. The guide for agents gives every call, for an AI agent or a script building gardens through it.</p><span class="go">Read the guide</span></a>
+    </div>
+  </section>
+
+  <section>
+    <div class="mono">What a browser needs</div>
+    <h2>WebGPU</h2>
+    <p class="intro">The garden runs its neurons on the graphics card, through WebGPU. As of November 2026 it has run in Microsoft Edge 157 and Firefox 148 on Windows 11 with an NVIDIA GeForce RTX 3060; other browsers and graphics cards have not been tried. Where a browser has no WebGPU, or a graphics card cannot give the page what it needs, the page says so.</p>
+  </section>
+
+  <section>
+    <div class="mono">Before this</div>
+    <h2>The older gardens</h2>
+    <p class="intro">This site as it stood in October 2026: Cortex Garden with simpler neurons, the Tadpole guide, Cochlea Garden, and the original Dendrite Garden, kept as they were.</p>
+    <div class="btns"><a class="btn" href="2026-10/">The older gardens</a></div>
   </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <span>Dendrite Garden · single-file pages, raw WebGPU, no build step.</span>
-    <a href="https://github.com/GSNautilus/dendrite-garden">Source on GitHub</a>
+    <span>Dendrite Garden · a single page, raw WebGPU.</span>
+    <a href="https://github.com/GSNautilus/dendrite-garden">On GitHub</a>
   </div>
 </footer>
 </body>
